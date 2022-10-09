@@ -7,3 +7,7 @@ edition = "2021"
 
 [dev-dependencies]
 rand = "0.8.5"
+
+[features]
+default = ["automata"]
+automata = []

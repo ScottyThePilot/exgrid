@@ -1,5 +1,7 @@
 #[macro_use]
 mod macros;
+#[cfg(feature = "automata")]
+pub mod automata;
 pub mod chunk;
 pub mod grid;
 

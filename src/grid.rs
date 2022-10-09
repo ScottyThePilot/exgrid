@@ -83,6 +83,11 @@ impl<T, const S: usize> ExGridSparse<T, S> {
     ExGridSparseIntoCells { inner }
   }
 
+  pub fn retain<F>(&mut self, f: F)
+  where F: FnMut(&[i32; 2], &mut ChunkSparse<T, S>) -> bool {
+    self.chunks.retain(f);
+  }
+
   #[inline]
   pub fn get_chunk(&self, pos: [i32; 2]) -> Option<&ChunkSparse<T, S>> {
     self.chunks.get(&pos)
@@ -207,6 +212,11 @@ impl<T, const S: usize> ExGrid<T, S> {
   pub fn into_cells(self) -> ExGridIntoCells<T, S> {
     let inner = self.chunks.into_iter().flat_map(new_into_cells as _);
     ExGridIntoCells { inner }
+  }
+
+  pub fn retain<F>(&mut self, f: F)
+  where F: FnMut(&[i32; 2], &mut Chunk<T, S>) -> bool {
+    self.chunks.retain(f);
   }
 
   #[inline]
