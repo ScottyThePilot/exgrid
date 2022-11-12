@@ -51,11 +51,21 @@ impl<T, const S: usize> ExGridSparse<T, S> {
   }
 
   pub fn clean_up(&mut self) {
-    self.chunks.retain(|_, chunk| !chunk.is_vacant());
+    self.chunks.retain(|_, chunk| !chunk.is_all_vacant());
   }
 
+  #[doc(hidden)]
+  #[deprecated = "use `is_all_vacant` instead"]
   pub fn is_vacant(&self) -> bool {
-    self.chunks.is_empty() || self.chunks.values().all(ChunkSparse::is_vacant)
+    self.is_all_vacant()
+  }
+
+  pub fn is_all_vacant(&self) -> bool {
+    self.chunks.is_empty() || self.chunks.values().all(ChunkSparse::is_all_vacant)
+  }
+
+  pub fn is_all_occupied(&self) -> bool {
+    !self.chunks.is_empty() && self.chunks.values().all(ChunkSparse::is_all_occupied)
   }
 
   #[inline]

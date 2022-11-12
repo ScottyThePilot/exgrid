@@ -100,7 +100,10 @@ impl From<Expansion4> for Expansion8 {
       ss: expansion4.south,
       ee: expansion4.east,
       ww: expansion4.west,
-      ..Default::default()
+      ne: expansion4.north && expansion4.east,
+      se: expansion4.south && expansion4.east,
+      sw: expansion4.south && expansion4.west,
+      nw: expansion4.north && expansion4.west
     }
   }
 }

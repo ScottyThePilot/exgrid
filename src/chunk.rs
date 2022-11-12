@@ -18,9 +18,30 @@ impl<T, const S: usize> ChunkSparse<T, S> {
     Self::default()
   }
 
-  /// Returns true if every cell in this chunk is `None`.
+  #[doc(hidden)]
+  #[deprecated = "use `is_all_vacant` instead"]
   pub fn is_vacant(&self) -> bool {
+    self.is_all_vacant()
+  }
+
+  /// Returns true if every cell in this chunk is `None`.
+  pub fn is_all_vacant(&self) -> bool {
     self.inner.iter().all(|cell| cell.is_none())
+  }
+
+  /// Returns true if every cell in this chunk is `Some`.
+  pub fn is_all_occupied(&self) -> bool {
+    self.inner.iter().all(|cell| cell.is_some())
+  }
+
+  pub fn horizontal_slice(&self, y: usize) -> [Option<T>; S]
+  where T: Copy {
+    self.inner.horizontal_slice(y)
+  }
+
+  pub fn vertical_slice(&self, x: usize) -> [Option<T>; S]
+  where T: Copy {
+    self.inner.vertical_slice(x)
   }
 
   #[inline]
@@ -117,6 +138,18 @@ impl<T, const S: usize> Chunk<T, S> {
   pub fn new() -> Self
   where [[T; S]; S]: Default {
     Self::default()
+  }
+
+  pub fn horizontal_slice(&self, y: usize) -> [T; S]
+  where T: Copy {
+    assert!(y < S, "index out of bounds: the size is {S} but the y-index is {y}");
+    self.inner[y]
+  }
+
+  pub fn vertical_slice(&self, x: usize) -> [T; S]
+  where T: Copy {
+    assert!(x < S, "index out of bounds: the size is {S} but the x-index is {x}");
+    self.inner.map(|s| s[x])
   }
 
   #[inline]
