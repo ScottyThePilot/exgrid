@@ -13,8 +13,7 @@ pub struct ChunkSparse<T, const S: usize> {
 }
 
 impl<T, const S: usize> ChunkSparse<T, S> {
-  pub fn new() -> Self
-  where [[Option<T>; S]; S]: Default {
+  pub fn new() -> Self {
     Self::default()
   }
 
@@ -89,11 +88,10 @@ impl<T, const S: usize> IndexMut<[usize; 2]> for ChunkSparse<T, S> {
   }
 }
 
-impl<T, const S: usize> Default for ChunkSparse<T, S>
-where [[Option<T>; S]; S]: Default {
+impl<T, const S: usize> Default for ChunkSparse<T, S> {
   #[inline]
   fn default() -> Self {
-    ChunkSparse { inner: Default::default() }
+    ChunkSparse { inner: Chunk::default() }
   }
 }
 
@@ -135,21 +133,27 @@ pub struct Chunk<T, const S: usize> {
 }
 
 impl<T, const S: usize> Chunk<T, S> {
-  pub fn new() -> Self
-  where [[T; S]; S]: Default {
+  pub fn new() -> Self where T: Default {
     Self::default()
   }
 
-  pub fn horizontal_slice(&self, y: usize) -> [T; S]
-  where T: Copy {
-    assert!(y < S, "index out of bounds: the size is {S} but the y-index is {y}");
-    self.inner[y]
+  pub fn horizontal_slice(&self, y: usize) -> [T; S] where T: Clone {
+    self.horizontal_slice_ref(y).clone()
   }
 
-  pub fn vertical_slice(&self, x: usize) -> [T; S]
-  where T: Copy {
+  pub fn horizontal_slice_ref(&self, y: usize) -> &[T; S] {
+    assert!(y < S, "index out of bounds: the size is {S} but the y-index is {y}");
+    &self.inner[y]
+  }
+
+  pub fn vertical_slice(&self, x: usize) -> [T; S] where T: Clone {
     assert!(x < S, "index out of bounds: the size is {S} but the x-index is {x}");
-    self.inner.map(|s| s[x])
+    array_init::array_init(|y| self.inner[y][x].clone())
+  }
+
+  pub fn vertical_slice_each_ref(&self, x: usize) -> [&T; S] {
+    assert!(x < S, "index out of bounds: the size is {S} but the x-index is {x}");
+    array_init::array_init(|y| &self.inner[y][x])
   }
 
   #[inline]
@@ -197,11 +201,10 @@ impl<T, const S: usize> IndexMut<[usize; 2]> for Chunk<T, S> {
   }
 }
 
-impl<T, const S: usize> Default for Chunk<T, S>
-where [[T; S]; S]: Default {
+impl<T: Default, const S: usize> Default for Chunk<T, S> {
   #[inline]
   fn default() -> Self {
-    Chunk { inner: Default::default() }
+    Chunk { inner: default_inner() }
   }
 }
 
@@ -237,6 +240,15 @@ impl<T, const S: usize> IntoIterator for Chunk<T, S> {
       .flat_map(<[T; S]>::into_iter as _);
     ChunkIntoIter { inner }
   }
+}
+
+// This is necessary due to the array primitive's `Default` impl not actually being generic across all `N`.
+fn default_inner<T: Default, const N: usize>() -> [[T; N]; N] {
+  array_init::array_init(|_| {
+    array_init::array_init(|_| {
+      T::default()
+    })
+  })
 }
 
 

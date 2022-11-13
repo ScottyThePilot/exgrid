@@ -31,15 +31,12 @@ fn test_grid_basics() {
   perform_test_g!(test_grid_basics_g);
 }
 
-fn test_grid_basics_g<const S: usize>()
-where [[u32; S]; S]: Default {
+fn test_grid_basics_g<const S: usize>() {
   let mut grid = ExGrid::<u32, S>::new();
   for ([x, y], value) in random_elements() {
     *grid.get_mut_default(x, y) = value;
     assert_eq!(grid.get(x, y), Some(&value));
   };
-
-
 
   for ([x, y], &value) in grid.cells() {
     assert_eq!(grid.get(x, y), Some(&value), "{x}, {y}");
@@ -59,8 +56,7 @@ fn test_grid_sparse_basics() {
   perform_test_g!(test_grid_sparse_basics_g);
 }
 
-fn test_grid_sparse_basics_g<const S: usize>()
-where [[Option<u32>; S]; S]: Default {
+fn test_grid_sparse_basics_g<const S: usize>() {
   let mut grid = ExGridSparse::<u32, S>::new();
   for ([x, y], value) in random_elements() {
     grid.insert(x, y, value);

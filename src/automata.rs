@@ -37,7 +37,7 @@ impl<A: AutomataRules<S>, const S: usize> Automata<A, S> {
     Automata { automata_rules, state }
   }
 
-  pub fn step(&mut self) where [[A::Cell; S]; S]: Default {
+  pub fn step(&mut self) where A::Cell: Default {
     let mut next = ExGrid::<A::Cell, S>::new();
     for (&pos, chunk) in self.state.chunks() {
       self.automata_rules.expansion(chunk).apply_with_center(pos, |pos| {

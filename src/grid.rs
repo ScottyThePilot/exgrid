@@ -37,16 +37,14 @@ impl<T, const S: usize> ExGridSparse<T, S> {
   }
 
   /// Gets a mutable reference to a cell, creating a chunk if necessary.
-  pub fn get_mut_default(&mut self, x: isize, y: isize) -> &mut Option<T>
-  where [[Option<T>; S]; S]: Default {
+  pub fn get_mut_default(&mut self, x: isize, y: isize) -> &mut Option<T> {
     let (chunk, local) = decompose::<S>([x, y]);
     &mut self.get_chunk_default(chunk)[local]
   }
 
   /// Sets the value of a given cell, creating a chunk if necessary,
   /// returning any contained value if present.
-  pub fn insert(&mut self, x: isize, y: isize, value: T) -> Option<T>
-  where [[Option<T>; S]; S]: Default {
+  pub fn insert(&mut self, x: isize, y: isize, value: T) -> Option<T> {
     replace(self.get_mut_default(x, y), Some(value))
   }
 
@@ -109,8 +107,7 @@ impl<T, const S: usize> ExGridSparse<T, S> {
   }
 
   #[inline]
-  pub fn get_chunk_default(&mut self, pos: [i32; 2]) -> &mut ChunkSparse<T, S>
-  where [[Option<T>; S]; S]: Default {
+  pub fn get_chunk_default(&mut self, pos: [i32; 2]) -> &mut ChunkSparse<T, S> {
     self.get_chunk_entry(pos).or_default()
   }
 
@@ -194,7 +191,7 @@ impl<T, const S: usize> ExGrid<T, S> {
 
   /// Gets a mutable reference to the value of a cell, creating a chunk if necessary.
   pub fn get_mut_default(&mut self, x: isize, y: isize) -> &mut T
-  where [[T; S]; S]: Default {
+  where T: Default {
     let (chunk, local) = decompose::<S>([x, y]);
     &mut self.get_chunk_default(chunk)[local]
   }
@@ -241,7 +238,7 @@ impl<T, const S: usize> ExGrid<T, S> {
 
   #[inline]
   pub fn get_chunk_default(&mut self, pos: [i32; 2]) -> &mut Chunk<T, S>
-  where [[T; S]; S]: Default {
+  where T: Default {
     self.get_chunk_entry(pos).or_default()
   }
 
