@@ -25,27 +25,27 @@ impl<T, const S: usize> ExGridSparse<T, S> {
   }
 
   /// Gets a reference to the value of a cell if it or the chunk it is located in exists.
-  pub fn get(&self, x: isize, y: isize) -> Option<&T> {
-    let (chunk, local) = decompose::<S>([x, y]);
+  pub fn get(&self, pos: [isize; 2]) -> Option<&T> {
+    let (chunk, local) = decompose::<S>(pos);
     self.get_chunk(chunk)?[local].as_ref()
   }
 
   /// Gets a mutable reference to the value of a cell if it or the chunk it is located in exists.
-  pub fn get_mut(&mut self, x: isize, y: isize) -> Option<&mut T> {
-    let (chunk, local) = decompose::<S>([x, y]);
+  pub fn get_mut(&mut self, pos: [isize; 2]) -> Option<&mut T> {
+    let (chunk, local) = decompose::<S>(pos);
     self.get_chunk_mut(chunk)?[local].as_mut()
   }
 
   /// Gets a mutable reference to a cell, creating a chunk if necessary.
-  pub fn get_mut_default(&mut self, x: isize, y: isize) -> &mut Option<T> {
-    let (chunk, local) = decompose::<S>([x, y]);
+  pub fn get_mut_default(&mut self, pos: [isize; 2]) -> &mut Option<T> {
+    let (chunk, local) = decompose::<S>(pos);
     &mut self.get_chunk_default(chunk)[local]
   }
 
   /// Sets the value of a given cell, creating a chunk if necessary,
   /// returning any contained value if present.
-  pub fn insert(&mut self, x: isize, y: isize, value: T) -> Option<T> {
-    replace(self.get_mut_default(x, y), Some(value))
+  pub fn insert(&mut self, pos: [isize; 2], value: T) -> Option<T> {
+    replace(self.get_mut_default(pos), Some(value))
   }
 
   pub fn clean_up(&mut self) {
@@ -64,6 +64,17 @@ impl<T, const S: usize> ExGridSparse<T, S> {
 
   pub fn is_all_occupied(&self) -> bool {
     !self.chunks.is_empty() && self.chunks.values().all(ChunkSparse::is_all_occupied)
+  }
+
+  /// Returns two points `(min, max)` that bound a box containing the all chunks in this grid.
+  pub fn chunks_bounds(&self) -> Option<([i32; 2], [i32; 2])> {
+    chunks_bounds(&self.chunks)
+  }
+
+  /// Returns two points `(min, max)` that bound a box containing all possible cells of this grid.
+  /// This is "naive" because it may overestimate.
+  pub fn naive_bounds(&self) -> Option<([isize; 2], [isize; 2])> {
+    self.chunks_bounds().map(map_total_bounds::<S>)
   }
 
   #[inline]
@@ -178,22 +189,39 @@ impl<T, const S: usize> ExGrid<T, S> {
   }
 
   /// Gets a reference to the value of a cell if the chunk it is located in exists.
-  pub fn get(&self, x: isize, y: isize) -> Option<&T> {
-    let (chunk, local) = decompose::<S>([x, y]);
+  pub fn get(&self, pos: [isize; 2]) -> Option<&T> {
+    let (chunk, local) = decompose::<S>(pos);
     self.chunks.get(&chunk).map(|c| &c[local])
   }
 
   /// Gets a mutable reference to the value of a cell if the chunk it is located in exists.
-  pub fn get_mut(&mut self, x: isize, y: isize) -> Option<&mut T> {
-    let (chunk, local) = decompose::<S>([x, y]);
+  pub fn get_mut(&mut self, pos: [isize; 2]) -> Option<&mut T> {
+    let (chunk, local) = decompose::<S>(pos);
     self.chunks.get_mut(&chunk).map(|c| &mut c[local])
   }
 
   /// Gets a mutable reference to the value of a cell, creating a chunk if necessary.
-  pub fn get_mut_default(&mut self, x: isize, y: isize) -> &mut T
+  pub fn get_mut_default(&mut self, pos: [isize; 2]) -> &mut T
   where T: Default {
-    let (chunk, local) = decompose::<S>([x, y]);
+    let (chunk, local) = decompose::<S>(pos);
     &mut self.get_chunk_default(chunk)[local]
+  }
+
+  /// Sets the value of a given cell, creating a chunk if necessary,
+  /// returning the previously contained value.
+  pub fn insert_default(&mut self, pos: [isize; 2], value: T) -> T
+  where T: Default {
+    replace(self.get_mut_default(pos), value)
+  }
+
+  /// Returns two points `(min, max)` that bound a box containing the all chunks in this grid.
+  pub fn chunks_bounds(&self) -> Option<([i32; 2], [i32; 2])> {
+    chunks_bounds(&self.chunks)
+  }
+
+  /// Returns two points `(min, max)` that bound a box containing all possible cells of this grid.
+  pub fn bounds(&self) -> Option<([isize; 2], [isize; 2])> {
+    self.chunks_bounds().map(map_total_bounds::<S>)
   }
 
   #[inline]
@@ -298,15 +326,36 @@ impl<T, const S: usize> IntoIterator for ExGrid<T, S> {
 /// Converts global coordinates to coordinates for a single chunk
 /// and coordinates to a cell in that chunk.
 pub fn decompose<const S: usize>(pos: [isize; 2]) -> ([i32; 2], [usize; 2]) {
+  assert!(S > 0, "cannot index into a grid or chunk of size 0");
   let chunk = pos.map(|p| p.div_euclid(S as isize) as i32);
   let local = pos.map(|p| p.rem_euclid(S as isize) as usize);
   (chunk, local)
 }
 
 pub fn compose<const S: usize>(chunk: [i32; 2], local: [usize; 2]) -> [isize; 2] {
+  assert!(S > 0, "cannot index into a grid or chunk of size 0");
   let x = chunk[0] as isize * S as isize + local[0] as isize;
   let y = chunk[1] as isize * S as isize + local[1] as isize;
   [x, y]
+}
+
+fn chunks_bounds<C>(chunks: &HashMap<[i32; 2], C>) -> Option<([i32; 2], [i32; 2])> {
+  chunks.keys().fold(None, |state, &chunk| match state {
+    Some((min, max)) => Some((min_pos(min, chunk), max_pos(max, chunk))),
+    None => Some((chunk, chunk))
+  })
+}
+
+fn map_total_bounds<const S: usize>((min, max): ([i32; 2], [i32; 2])) -> ([isize; 2], [isize; 2]) {
+  (compose::<S>(min, [0, 0]), compose::<S>(max, [S - 1, S - 1]))
+}
+
+fn min_pos<T: Ord + Copy>(a: [T; 2], b: [T; 2]) -> [T; 2] {
+  [std::cmp::min(a[0], b[0]), std::cmp::min(a[1], b[1])]
+}
+
+fn max_pos<T: Ord + Copy>(a: [T; 2], b: [T; 2]) -> [T; 2] {
+  [std::cmp::max(a[0], b[0]), std::cmp::max(a[1], b[1])]
 }
 
 

@@ -33,21 +33,21 @@ fn test_grid_basics() {
 
 fn test_grid_basics_g<const S: usize>() {
   let mut grid = ExGrid::<u32, S>::new();
-  for ([x, y], value) in random_elements() {
-    *grid.get_mut_default(x, y) = value;
-    assert_eq!(grid.get(x, y), Some(&value));
+  for (pos, value) in random_elements() {
+    *grid.get_mut_default(pos) = value;
+    assert_eq!(grid.get(pos), Some(&value));
   };
 
-  for ([x, y], &value) in grid.cells() {
-    assert_eq!(grid.get(x, y), Some(&value), "{x}, {y}");
+  for (pos, &value) in grid.cells() {
+    assert_eq!(grid.get(pos), Some(&value), "{pos:?}");
   };
 
-  for ([x, y], &mut value) in grid.clone().cells_mut() {
-    assert_eq!(grid.get(x, y), Some(&value), "{x}, {y}");
+  for (pos, &mut value) in grid.clone().cells_mut() {
+    assert_eq!(grid.get(pos), Some(&value), "{pos:?}");
   };
 
-  for ([x, y], value) in grid.clone().into_cells() {
-    assert_eq!(grid.get(x, y), Some(&value), "{x}, {y}");
+  for (pos, value) in grid.clone().into_cells() {
+    assert_eq!(grid.get(pos), Some(&value), "{pos:?}");
   };
 }
 
@@ -58,21 +58,21 @@ fn test_grid_sparse_basics() {
 
 fn test_grid_sparse_basics_g<const S: usize>() {
   let mut grid = ExGridSparse::<u32, S>::new();
-  for ([x, y], value) in random_elements() {
-    grid.insert(x, y, value);
-    assert_eq!(grid.get(x, y), Some(&value));
+  for (pos, value) in random_elements() {
+    grid.insert(pos, value);
+    assert_eq!(grid.get(pos), Some(&value));
   };
 
-  for ([x, y], &value) in grid.cells() {
-    assert_eq!(grid.get(x, y), Some(&value), "{x}, {y}");
+  for (pos, &value) in grid.cells() {
+    assert_eq!(grid.get(pos), Some(&value), "{pos:?}");
   };
 
-  for ([x, y], &mut value) in grid.clone().cells_mut() {
-    assert_eq!(grid.get(x, y), Some(&value), "{x}, {y}");
+  for (pos, &mut value) in grid.clone().cells_mut() {
+    assert_eq!(grid.get(pos), Some(&value), "{pos:?}");
   };
 
-  for ([x, y], value) in grid.clone().into_cells() {
-    assert_eq!(grid.get(x, y), Some(&value), "{x}, {y}");
+  for (pos, value) in grid.clone().into_cells() {
+    assert_eq!(grid.get(pos), Some(&value), "{pos:?}");
   };
 }
 
