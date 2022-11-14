@@ -10,5 +10,5 @@ array-init = "2.0.1"
 rand = "0.8.5"
 
 [features]
-default = ["automata"]
+default = []
 automata = []
