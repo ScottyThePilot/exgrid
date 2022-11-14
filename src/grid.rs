@@ -1,26 +1,28 @@
 use crate::chunk::*;
 
-use std::mem::replace;
-use std::collections::HashMap;
-use std::collections::hash_map::Entry;
-use std::collections::hash_map::Iter as HashMapIter;
-use std::collections::hash_map::IterMut as HashMapIterMut;
-use std::collections::hash_map::IntoIter as HashMapIntoIter;
-use std::collections::hash_map::Values as HashMapValues;
-use std::collections::hash_map::ValuesMut as HashMapValuesMut;
-use std::collections::hash_map::IntoValues as HashMapIntoValues;
+use std::collections::hash_map::{
+  Entry, HashMap, RandomState,
+  Iter as HashMapIter,
+  IterMut as HashMapIterMut,
+  IntoIter as HashMapIntoIter,
+  Values as HashMapValues,
+  ValuesMut as HashMapValuesMut,
+  IntoValues as HashMapIntoValues
+};
+use std::hash::BuildHasher;
 use std::iter::{FlatMap, FusedIterator};
+use std::mem::replace;
 
 
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ExGridSparse<T, const S: usize> {
-  chunks: HashMap<[i32; 2], ChunkSparse<T, S>>
+#[derive(Debug, Clone)]
+pub struct ExGridSparse<T, const S: usize, H = RandomState> {
+  chunks: HashMap<[i32; 2], ChunkSparse<T, S>, H>
 }
 
-impl<T, const S: usize> ExGridSparse<T, S> {
+impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
   #[inline]
-  pub fn new() -> Self {
+  pub fn new() -> Self where H: Default {
     Self::default()
   }
 
@@ -46,6 +48,10 @@ impl<T, const S: usize> ExGridSparse<T, S> {
   /// returning any contained value if present.
   pub fn insert(&mut self, pos: [isize; 2], value: T) -> Option<T> {
     replace(self.get_mut_default(pos), Some(value))
+  }
+
+  pub fn clear(&mut self) {
+    self.chunks.clear();
   }
 
   pub fn clean_up(&mut self) {
@@ -138,14 +144,14 @@ impl<T, const S: usize> ExGridSparse<T, S> {
   }
 }
 
-impl<T, const S: usize> Default for ExGridSparse<T, S> {
+impl<T, H: Default, const S: usize> Default for ExGridSparse<T, S, H> {
   #[inline]
   fn default() -> Self {
     ExGridSparse { chunks: HashMap::default() }
   }
 }
 
-impl<'a, T, const S: usize> IntoIterator for &'a ExGridSparse<T, S> {
+impl<'a, T, H, const S: usize> IntoIterator for &'a ExGridSparse<T, S, H> {
   type Item = &'a T;
   type IntoIter = ExGridSparseIter<'a, T, S>;
 
@@ -155,7 +161,7 @@ impl<'a, T, const S: usize> IntoIterator for &'a ExGridSparse<T, S> {
   }
 }
 
-impl<'a, T, const S: usize> IntoIterator for &'a mut ExGridSparse<T, S> {
+impl<'a, T, H, const S: usize> IntoIterator for &'a mut ExGridSparse<T, S, H> {
   type Item = &'a mut T;
   type IntoIter = ExGridSparseIterMut<'a, T, S>;
 
@@ -165,7 +171,7 @@ impl<'a, T, const S: usize> IntoIterator for &'a mut ExGridSparse<T, S> {
   }
 }
 
-impl<T, const S: usize> IntoIterator for ExGridSparse<T, S> {
+impl<T, H, const S: usize> IntoIterator for ExGridSparse<T, S, H> {
   type Item = T;
   type IntoIter = ExGridSparseIntoIter<T, S>;
 
@@ -177,14 +183,14 @@ impl<T, const S: usize> IntoIterator for ExGridSparse<T, S> {
 
 
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ExGrid<T, const S: usize> {
-  chunks: HashMap<[i32; 2], Chunk<T, S>>
+#[derive(Debug, Clone)]
+pub struct ExGrid<T, const S: usize, H = RandomState> {
+  chunks: HashMap<[i32; 2], Chunk<T, S>, H>
 }
 
-impl<T, const S: usize> ExGrid<T, S> {
+impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
   #[inline]
-  pub fn new() -> Self {
+  pub fn new() -> Self where H: Default {
     Self::default()
   }
 
@@ -212,6 +218,10 @@ impl<T, const S: usize> ExGrid<T, S> {
   pub fn insert_default(&mut self, pos: [isize; 2], value: T) -> T
   where T: Default {
     replace(self.get_mut_default(pos), value)
+  }
+
+  pub fn clear(&mut self) {
+    self.chunks.clear();
   }
 
   /// Returns two points `(min, max)` that bound a box containing the all chunks in this grid.
@@ -286,14 +296,14 @@ impl<T, const S: usize> ExGrid<T, S> {
   }
 }
 
-impl<T, const S: usize> Default for ExGrid<T, S> {
+impl<T, H: Default, const S: usize> Default for ExGrid<T, S, H> {
   #[inline]
   fn default() -> Self {
     ExGrid { chunks: HashMap::default() }
   }
 }
 
-impl<'a, T, const S: usize> IntoIterator for &'a ExGrid<T, S> {
+impl<'a, T, H, const S: usize> IntoIterator for &'a ExGrid<T, S, H> {
   type Item = &'a T;
   type IntoIter = ExGridIter<'a, T, S>;
 
@@ -303,7 +313,7 @@ impl<'a, T, const S: usize> IntoIterator for &'a ExGrid<T, S> {
   }
 }
 
-impl<'a, T, const S: usize> IntoIterator for &'a mut ExGrid<T, S> {
+impl<'a, T, H, const S: usize> IntoIterator for &'a mut ExGrid<T, S, H> {
   type Item = &'a mut T;
   type IntoIter = ExGridIterMut<'a, T, S>;
 
@@ -313,7 +323,7 @@ impl<'a, T, const S: usize> IntoIterator for &'a mut ExGrid<T, S> {
   }
 }
 
-impl<T, const S: usize> IntoIterator for ExGrid<T, S> {
+impl<T, H, const S: usize> IntoIterator for ExGrid<T, S, H> {
   type Item = T;
   type IntoIter = ExGridIntoIter<T, S>;
 
@@ -339,7 +349,7 @@ pub fn compose<const S: usize>(chunk: [i32; 2], local: [usize; 2]) -> [isize; 2]
   [x, y]
 }
 
-fn chunks_bounds<C>(chunks: &HashMap<[i32; 2], C>) -> Option<([i32; 2], [i32; 2])> {
+fn chunks_bounds<C, H>(chunks: &HashMap<[i32; 2], C, H>) -> Option<([i32; 2], [i32; 2])> {
   chunks.keys().fold(None, |state, &chunk| match state {
     Some((min, max)) => Some((min_pos(min, chunk), max_pos(max, chunk))),
     None => Some((chunk, chunk))
