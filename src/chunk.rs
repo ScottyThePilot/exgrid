@@ -1,8 +1,8 @@
 use std::ops::{Index, IndexMut};
 use std::slice::Iter as ArrayIter;
 use std::slice::IterMut as ArrayIterMut;
-use std::array::IntoIter as ArrayIntoIter;
-use std::iter::{Enumerate, FilterMap, FlatMap, Flatten, FusedIterator};
+use std::vec::IntoIter as ArrayIntoIter;
+use std::iter::{Enumerate, FilterMap, Flatten, FusedIterator};
 
 
 
@@ -167,20 +167,17 @@ impl<T, const S: usize> Chunk<T, S> {
   }
 
   pub fn cells(&self) -> ChunkCells<T, S> {
-    let f: fn((usize, &[T; S])) -> EnumerateExtra<ArrayIter<T>> = |i| i.into();
-    let inner = (&self.inner).into_iter().enumerate().flat_map(f);
+    let inner = Enumerate2::new(self.iter().inner);
     ChunkCells { inner }
   }
 
   pub fn cells_mut(&mut self) -> ChunkCellsMut<T, S> {
-    let f: fn((usize, &mut [T; S])) -> EnumerateExtra<ArrayIterMut<T>> = |i| i.into();
-    let inner = (&mut self.inner).into_iter().enumerate().flat_map(f);
+    let inner = Enumerate2::new(self.iter_mut().inner);
     ChunkCellsMut { inner }
   }
 
   pub fn into_cells(self) -> ChunkIntoCells<T, S> {
-    let inner = (self.inner).into_iter().enumerate()
-      .flat_map(EnumerateExtra::from as _);
+    let inner = Enumerate2::new(self.into_iter().inner);
     ChunkIntoCells { inner }
   }
 }
@@ -213,8 +210,7 @@ impl<'a, T, const S: usize> IntoIterator for &'a Chunk<T, S> {
   type IntoIter = ChunkIter<'a, T, S>;
 
   fn into_iter(self) -> Self::IntoIter {
-    let f: fn(&[_; S]) -> ArrayIter<_> = |i| i.into_iter();
-    let inner = (&self.inner).into_iter().flat_map(f);
+    let inner = cast_nested_array_ref(&self.inner).iter();
     ChunkIter { inner }
   }
 }
@@ -224,8 +220,7 @@ impl<'a, T, const S: usize> IntoIterator for &'a mut Chunk<T, S> {
   type IntoIter = ChunkIterMut<'a, T, S>;
 
   fn into_iter(self) -> Self::IntoIter {
-    let f: fn(&mut [_; S]) -> ArrayIterMut<_> = |i| i.into_iter();
-    let inner = (&mut self.inner).into_iter().flat_map(f);
+    let inner = cast_nested_array_mut(&mut self.inner).iter_mut();
     ChunkIterMut { inner }
   }
 }
@@ -236,8 +231,7 @@ impl<T, const S: usize> IntoIterator for Chunk<T, S> {
 
   #[inline]
   fn into_iter(self) -> Self::IntoIter {
-    let inner = self.inner.into_iter()
-      .flat_map(<[T; S]>::into_iter as _);
+    let inner = Vec::from(cast_nested_array(self.inner)).into_iter();
     ChunkIntoIter { inner }
   }
 }
@@ -249,6 +243,33 @@ fn default_inner<T: Default, const N: usize>() -> [[T; N]; N] {
       T::default()
     })
   })
+}
+
+fn cast_nested_array<T, const N: usize>(array: [[T; N]; N]) -> Box<[T]> {
+  let Some(len) = usize::checked_mul(N, N) else { panic!() };
+  let array: Box<[[T; N]; N]> = Box::new(array);
+  unsafe {
+    // Convert the box into a pointer, then a wide pointer, then a wide box-pointer
+    let array_ptr = Box::into_raw(array) as *mut T;
+    let ptr = std::slice::from_raw_parts_mut(array_ptr, len) as *mut [T];
+    Box::from_raw(ptr)
+  }
+}
+
+fn cast_nested_array_ref<T, const N: usize>(array: &[[T; N]; N]) -> &[T] {
+  let Some(len) = usize::checked_mul(N, N) else { panic!() };
+  unsafe {
+    let ptr = array as *const [[T; N]; N] as *const T;
+    std::slice::from_raw_parts(ptr, len)
+  }
+}
+
+fn cast_nested_array_mut<T, const N: usize>(array: &mut [[T; N]; N]) -> &mut [T] {
+  let Some(len) = usize::checked_mul(N, N) else { panic!() };
+  unsafe {
+    let ptr = array as *mut [[T; N]; N] as *mut T;
+    std::slice::from_raw_parts_mut(ptr, len)
+  }
 }
 
 
@@ -315,11 +336,7 @@ impl_iterator!(ChunkSparseIntoCells, <T, S>, ([usize; 2], T), (0, Some(S * S)));
 #[repr(transparent)]
 #[derive(Debug, Clone)]
 pub struct ChunkIter<'a, T, const S: usize> {
-  inner: FlatMap<
-    ArrayIter<'a, [T; S]>,
-    ArrayIter<'a, T>,
-    fn(&[T; S]) -> ArrayIter<T>
-  >
+  inner: ArrayIter<'a, T>
 }
 
 impl_iterator_known_size!(ChunkIter, <'a, T, S>, &'a T, S * S);
@@ -327,11 +344,7 @@ impl_iterator_known_size!(ChunkIter, <'a, T, S>, &'a T, S * S);
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct ChunkIterMut<'a, T, const S: usize> {
-  inner: FlatMap<
-    ArrayIterMut<'a, [T; S]>,
-    ArrayIterMut<'a, T>,
-    fn(&mut [T; S]) -> ArrayIterMut<T>
-  >
+  inner: ArrayIterMut<'a, T>
 }
 
 impl_iterator_known_size!(ChunkIterMut, <'a, T, S>, &'a mut T, S * S);
@@ -339,11 +352,7 @@ impl_iterator_known_size!(ChunkIterMut, <'a, T, S>, &'a mut T, S * S);
 #[repr(transparent)]
 #[derive(Debug, Clone)]
 pub struct ChunkIntoIter<T, const S: usize> {
-  inner: FlatMap<
-    ArrayIntoIter<[T; S], S>,
-    ArrayIntoIter<T, S>,
-    fn([T; S]) -> ArrayIntoIter<T, S>
-  >
+  inner: ArrayIntoIter<T>
 }
 
 impl_iterator_known_size!(ChunkIntoIter, <T, S>, T, S * S);
@@ -351,11 +360,7 @@ impl_iterator_known_size!(ChunkIntoIter, <T, S>, T, S * S);
 #[repr(transparent)]
 #[derive(Debug, Clone)]
 pub struct ChunkCells<'a, T, const S: usize> {
-  inner: FlatMap<
-    Enumerate<ArrayIter<'a, [T; S]>>,
-    EnumerateExtra<ArrayIter<'a, T>>,
-    fn((usize, &[T; S])) -> EnumerateExtra<ArrayIter<T>>
-  >
+  inner: Enumerate2<ArrayIter<'a, T>, S>
 }
 
 impl_iterator_known_size!(ChunkCells, <'a, T, S>, ([usize; 2], &'a T), S * S);
@@ -363,11 +368,7 @@ impl_iterator_known_size!(ChunkCells, <'a, T, S>, ([usize; 2], &'a T), S * S);
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct ChunkCellsMut<'a, T, const S: usize> {
-  inner: FlatMap<
-    Enumerate<ArrayIterMut<'a, [T; S]>>,
-    EnumerateExtra<ArrayIterMut<'a, T>>,
-    fn((usize, &mut [T; S])) -> EnumerateExtra<ArrayIterMut<T>>
-  >
+  inner: Enumerate2<ArrayIterMut<'a, T>, S>
 }
 
 impl_iterator_known_size!(ChunkCellsMut, <'a, T, S>, ([usize; 2], &'a mut T), S * S);
@@ -375,11 +376,7 @@ impl_iterator_known_size!(ChunkCellsMut, <'a, T, S>, ([usize; 2], &'a mut T), S 
 #[repr(transparent)]
 #[derive(Debug, Clone)]
 pub struct ChunkIntoCells<T, const S: usize> {
-  inner: FlatMap<
-    Enumerate<ArrayIntoIter<[T; S], S>>,
-    EnumerateExtra<ArrayIntoIter<T, S>>,
-    fn((usize, [T; S])) -> EnumerateExtra<ArrayIntoIter<T, S>>
-  >
+  inner: Enumerate2<ArrayIntoIter<T>, S>
 }
 
 impl_iterator_known_size!(ChunkIntoCells, <T, S>, ([usize; 2], T), S * S);
@@ -387,89 +384,74 @@ impl_iterator_known_size!(ChunkIntoCells, <T, S>, ([usize; 2], T), S * S);
 
 
 macro_rules! map {
-  ($self:ident, $expr:expr) => {
+  ($S:expr, $expr:expr) => {
     match $expr {
-      Some((other_index, value)) => {
-        Some(([other_index, $self.index], value))
+      Some((i, item)) => {
+        Some(([i % $S, i / $S], item))
       },
       None => None
     }
   };
 }
 
+/// Converts regular enumeration into 2D enumeration
 #[derive(Debug, Clone)]
-struct EnumerateExtra<I> {
-  index: usize,
-  iter: Enumerate<I>
+struct Enumerate2<I, const S: usize> {
+  inner: Enumerate<I>
 }
 
-impl<I> EnumerateExtra<I> {
-  pub fn new<T>(index: usize, iter: I) -> Self
-  where I: Iterator<Item = T> {
-    EnumerateExtra { index, iter: iter.enumerate() }
+impl<I, const S: usize> Enumerate2<I, S> {
+  pub fn new<T>(inner: I) -> Self where I: Iterator<Item = T> {
+    Enumerate2 { inner: inner.enumerate() }
   }
 }
 
-impl<I, T> From<(usize, I)> for EnumerateExtra<I::IntoIter>
-where I: IntoIterator<Item = T> {
-  #[inline]
-  fn from((index, iter): (usize, I)) -> Self {
-    Self::new::<T>(index, iter.into_iter())
-  }
-}
-
-impl<I, T> Iterator for EnumerateExtra<I>
+impl<I, T, const S: usize> Iterator for Enumerate2<I, S>
 where I: Iterator<Item = T> {
   type Item = ([usize; 2], T);
 
-  #[inline]
   fn next(&mut self) -> Option<Self::Item> {
-    map!(self, self.iter.next())
+    map!(S, self.inner.next())
   }
 
   #[inline]
   fn nth(&mut self, n: usize) -> Option<Self::Item> {
-    map!(self, self.iter.nth(n))
+    map!(S, self.inner.nth(n))
   }
 
   #[inline]
   fn size_hint(&self) -> (usize, Option<usize>) {
-    self.iter.size_hint()
+    self.inner.size_hint()
   }
 
   #[inline]
-  fn fold<B, F>(self, init: B, f: F) -> B
-  where F: FnMut(B, Self::Item) -> B, {
-    self.iter.fold(init, wrap_fold_fn(self.index, f))
+  fn fold<A, F>(self, init: A, mut f: F) -> A
+  where F: FnMut(A, Self::Item) -> A {
+    self.inner.fold(init, |a, (i, item)| {
+      f(a, ([i % S, i / S], item))
+    })
   }
 }
 
-impl<I, T> DoubleEndedIterator for EnumerateExtra<I>
+impl<I, T, const S: usize> DoubleEndedIterator for Enumerate2<I, S>
 where I: DoubleEndedIterator<Item = T> + ExactSizeIterator {
   #[inline]
   fn next_back(&mut self) -> Option<Self::Item> {
-    map!(self, self.iter.next_back())
+    map!(S, self.inner.next_back())
   }
 
   #[inline]
   fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
-    map!(self, self.iter.nth_back(n))
+    map!(S, self.inner.nth_back(n))
   }
 
   #[inline]
-  fn rfold<A, F>(self, init: A, f: F) -> A
+  fn rfold<A, F>(self, init: A, mut f: F) -> A
   where F: FnMut(A, Self::Item) -> A {
-    self.iter.rfold(init, wrap_fold_fn(self.index, f))
+    self.inner.rfold(init, |a, (i, item)| {
+      f(a, ([i % S, i / S], item))
+    })
   }
 }
 
-impl<I> FusedIterator for EnumerateExtra<I> where I: FusedIterator {}
-
-
-
-fn wrap_fold_fn<T, A, F>(index: usize, mut f: F) -> impl FnMut(A, (usize, T)) -> A
-where F: FnMut(A, ([usize; 2], T)) -> A {
-  move |acc, (other_index, value)| {
-    f(acc, ([index, other_index], value))
-  }
-}
+impl<I, const S: usize> FusedIterator for Enumerate2<I, S> where I: FusedIterator {}
