@@ -144,3 +144,77 @@ macro_rules! impl_iterator_no_double_ended {
     impl<T, const S: usize> FusedIterator for $Struct<T, S> {}
   };
 }
+
+#[cfg(feature = "multi-thread")]
+macro_rules! impl_par_iterator_methods {
+  () => {
+    #[inline]
+    fn drive_unindexed<C>(self, consumer: C) -> C::Result
+    where C: UnindexedConsumer<Self::Item> {
+      self.inner.drive_unindexed(consumer)
+    }
+
+    #[inline]
+    fn opt_len(&self) -> Option<usize> {
+      self.inner.opt_len()
+    }
+  };
+}
+
+#[cfg(feature = "multi-thread")]
+macro_rules! impl_par_indexed_iterator_methods {
+  () => {
+    #[inline]
+    fn drive<C>(self, consumer: C) -> C::Result
+    where C: Consumer<Self::Item> {
+      self.inner.drive(consumer)
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+      self.inner.len()
+    }
+
+    #[inline]
+    fn with_producer<CB>(self, callback: CB) -> CB::Output
+    where CB: ProducerCallback<Self::Item> {
+      self.inner.with_producer(callback)
+    }
+  };
+}
+
+#[cfg(feature = "multi-thread")]
+macro_rules! impl_par_iterator {
+  ($Struct:ident, <'data, T: $($Bound:ident +)? 'data, S>, $Item:ty) => {
+    impl<'data, T: $($Bound +)? 'data, const S: usize> ParallelIterator for $Struct<'data, T, S> {
+      type Item = $Item;
+
+      impl_par_iterator_methods!();
+    }
+  };
+  ($Struct:ident, <T $(: $Bound:ident)?, S>, $Item:ty) => {
+    impl<T: Send, const S: usize> ParallelIterator for $Struct<T, S> {
+      type Item = $Item;
+
+      impl_par_iterator_methods!();
+    }
+  };
+}
+
+#[cfg(feature = "multi-thread")]
+macro_rules! impl_par_iterator_indexed {
+  ($Struct:ident, <'data, T: $($Bound:ident +)? 'data, S>, $Item:ty) => {
+    impl_par_iterator!($Struct, <'data, T $(: $Bound +)? 'data, S>, $Item);
+
+    impl<'data, T: $($Bound +)? 'data, const S: usize> IndexedParallelIterator for $Struct<'data, T, S> {
+      impl_par_indexed_iterator_methods!();
+    }
+  };
+  ($Struct:ident, <T $(: $Bound:ident)?, S>, $Item:ty) => {
+    impl_par_iterator!($Struct, <T $(: $Bound)?, S>, $Item);
+
+    impl<T: Send, const S: usize> IndexedParallelIterator for $Struct<T, S> {
+      impl_par_indexed_iterator_methods!();
+    }
+  };
+}
