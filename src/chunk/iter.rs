@@ -62,16 +62,13 @@ impl_iterator!(ChunkSparseIntoIter, <T, S>, T, (0, Some(S * S)));
 #[repr(transparent)]
 #[derive(Debug, Clone)]
 pub struct ChunkSparseCells<'a, T, const S: usize> {
-  inner: FilterMap<
-    ChunkCells<'a, Option<T>, S>,
-    fn(([usize; 2], &Option<T>)) -> Option<([usize; 2], &T)>
-  >
+  inner: FilterMap<ChunkCells<'a, Option<T>, S>, super::FilterCells<T, S>>
 }
 
 impl<'a, T, const S: usize> ChunkSparseCells<'a, T, S> {
   pub(crate) fn new(chunk: &'a ChunkSparse<T, S>) -> Self {
     let inner = ChunkCells::new(&chunk.inner)
-      .filter_map(ChunkSparse::<T, S>::F_CELLS);
+      .filter_map(ChunkSparse::<T, S>::NEW_CELLS);
     ChunkSparseCells { inner }
   }
 }
@@ -83,16 +80,13 @@ impl_iterator!(ChunkSparseCells, <'a, T, S>, ([usize; 2], &'a T), (0, Some(S * S
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct ChunkSparseCellsMut<'a, T, const S: usize> {
-  inner: FilterMap<
-    ChunkCellsMut<'a, Option<T>, S>,
-    fn(([usize; 2], &mut Option<T>)) -> Option<([usize; 2], &mut T)>
-  >
+  inner: FilterMap<ChunkCellsMut<'a, Option<T>, S>, super::FilterCellsMut<T, S>>
 }
 
 impl<'a, T, const S: usize> ChunkSparseCellsMut<'a, T, S> {
   pub(crate) fn new(chunk: &'a mut ChunkSparse<T, S>) -> Self {
     let inner = ChunkCellsMut::new(&mut chunk.inner)
-      .filter_map(ChunkSparse::<T, S>::F_CELLS_MUT);
+      .filter_map(ChunkSparse::<T, S>::NEW_CELLS_MUT);
     ChunkSparseCellsMut { inner }
   }
 }
@@ -104,16 +98,13 @@ impl_iterator!(ChunkSparseCellsMut, <'a, T, S>, ([usize; 2], &'a mut T), (0, Som
 #[repr(transparent)]
 #[derive(Debug, Clone)]
 pub struct ChunkSparseIntoCells<T, const S: usize> {
-  inner: FilterMap<
-    ChunkIntoCells<Option<T>, S>,
-    fn(([usize; 2], Option<T>)) -> Option<([usize; 2], T)>
-  >
+  inner: FilterMap<ChunkIntoCells<Option<T>, S>, super::FilterIntoCells<T, S>>
 }
 
 impl<T, const S: usize> ChunkSparseIntoCells<T, S> {
   pub(crate) fn new(chunk: ChunkSparse<T, S>) -> Self {
     let inner = ChunkIntoCells::new(chunk.inner)
-      .filter_map(ChunkSparse::<T, S>::F_INTO_CELLS);
+      .filter_map(ChunkSparse::<T, S>::NEW_INTO_CELLS);
     ChunkSparseIntoCells { inner }
   }
 }
