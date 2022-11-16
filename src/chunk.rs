@@ -64,11 +64,6 @@ impl<T, const S: usize> ChunkSparse<T, S> {
     self.into_iter()
   }
 
-  // Functions for filtering iterator output
-  const F_CELLS: fn(([usize; 2], &Option<T>)) -> Option<([usize; 2], &T)> = |(i, v)| v.as_ref().map(|v| (i, v));
-  const F_CELLS_MUT: fn(([usize; 2], &mut Option<T>)) -> Option<([usize; 2], &mut T)> = |(i, v)| v.as_mut().map(|v| (i, v));
-  const F_INTO_CELLS: fn(([usize; 2], Option<T>)) -> Option<([usize; 2], T)> = |(i, v)| v.map(|v| (i, v));
-
   #[inline]
   pub fn cells(&self) -> ChunkSparseCells<T, S> {
     ChunkSparseCells::new(self)
@@ -83,6 +78,11 @@ impl<T, const S: usize> ChunkSparse<T, S> {
   pub fn into_cells(self) -> ChunkSparseIntoCells<T, S> {
     ChunkSparseIntoCells::new(self)
   }
+
+  // Functions for filtering iterator output
+  const NEW_CELLS: FilterCells<T, S> = |(i, v)| v.as_ref().map(|v| (i, v));
+  const NEW_CELLS_MUT: FilterCellsMut<T, S> = |(i, v)| v.as_mut().map(|v| (i, v));
+  const NEW_INTO_CELLS: FilterIntoCells<T, S> = |(i, v)| v.map(|v| (i, v));
 }
 
 impl<T, const S: usize> Index<[usize; 2]> for ChunkSparse<T, S> {
@@ -170,6 +170,11 @@ impl<T: Send, const S: usize> IntoParallelIterator for ChunkSparse<T, S> {
     ChunkSparseIntoIterPar::new(self)
   }
 }
+
+type FilterCells<T, const S: usize> = for<'a> fn(([usize; 2], &'a Option<T>)) -> Option<([usize; 2], &'a T)>;
+type FilterCellsMut<T, const S: usize> = for<'a> fn(([usize; 2], &'a mut Option<T>)) -> Option<([usize; 2], &'a mut T)>;
+type FilterIntoCells<T, const S: usize> = fn(([usize; 2], Option<T>)) -> Option<([usize; 2], T)>;
+
 
 
 #[repr(transparent)]

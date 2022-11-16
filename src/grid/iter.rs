@@ -61,14 +61,14 @@ impl_iterator_no_double_ended!(ExGridSparseIntoIter, <T, S>, T);
 pub struct ExGridSparseCells<'a, T, const S: usize> {
   inner: FlatMap<
     HashMapIter<'a, [i32; 2], ChunkSparse<T, S>>,
-    ComposeExtra<ChunkSparseCells<'a, T, S>, S>,
-    for<'r> fn((&'r [i32; 2], &'r ChunkSparse<T, S>)) -> ComposeExtra<ChunkSparseCells<'r, T, S>, S>
+    Compose<ChunkSparseCells<'a, T, S>, S>,
+    super::FilterSparseCells<T, S>
   >
 }
 
 impl<'a, T, const S: usize> ExGridSparseCells<'a, T, S> {
   pub(crate) fn new<H>(grid: &'a ExGridSparse<T, S, H>) -> Self {
-    let inner = grid.chunks.iter().flat_map(new_sparse_cells as _);
+    let inner = grid.chunks.iter().flat_map(ExGridSparse::<T, S, H>::NEW_SPARSE_CELLS);
     ExGridSparseCells { inner }
   }
 }
@@ -80,14 +80,14 @@ impl_iterator_no_double_ended!(ExGridSparseCells, <'a, T, S>, ([isize; 2], &'a T
 pub struct ExGridSparseCellsMut<'a, T, const S: usize> {
   inner: FlatMap<
     HashMapIterMut<'a, [i32; 2], ChunkSparse<T, S>>,
-    ComposeExtra<ChunkSparseCellsMut<'a, T, S>, S>,
-    for<'r> fn((&'r [i32; 2], &'r mut ChunkSparse<T, S>)) -> ComposeExtra<ChunkSparseCellsMut<'r, T, S>, S>
+    Compose<ChunkSparseCellsMut<'a, T, S>, S>,
+    super::FilterSparseCellsMut<T, S>
   >
 }
 
 impl<'a, T, const S: usize> ExGridSparseCellsMut<'a, T, S> {
   pub(crate) fn new<H>(grid: &'a mut ExGridSparse<T, S, H>) -> Self {
-    let inner = grid.chunks.iter_mut().flat_map(new_sparse_cells_mut as _);
+    let inner = grid.chunks.iter_mut().flat_map(ExGridSparse::<T, S, H>::NEW_SPARSE_CELLS_MUT);
     ExGridSparseCellsMut { inner }
   }
 }
@@ -99,14 +99,14 @@ impl_iterator_no_double_ended!(ExGridSparseCellsMut, <'a, T, S>, ([isize; 2], &'
 pub struct ExGridSparseIntoCells<T, const S: usize> {
   inner: FlatMap<
     HashMapIntoIter<[i32; 2], ChunkSparse<T, S>>,
-    ComposeExtra<ChunkSparseIntoCells<T, S>, S>,
-    fn(([i32; 2], ChunkSparse<T, S>)) -> ComposeExtra<ChunkSparseIntoCells<T, S>, S>
+    Compose<ChunkSparseIntoCells<T, S>, S>,
+    super::FilterSparseIntoCells<T, S>
   >
 }
 
 impl<T, const S: usize> ExGridSparseIntoCells<T, S> {
   pub(crate) fn new<H>(grid: ExGridSparse<T, S, H>) -> Self {
-    let inner = grid.chunks.into_iter().flat_map(new_sparse_into_cells as _);
+    let inner = grid.chunks.into_iter().flat_map(ExGridSparse::<T, S, H>::NEW_SPARSE_INTO_CELLS);
     ExGridSparseIntoCells { inner }
   }
 }
@@ -165,14 +165,14 @@ impl_iterator_no_double_ended!(ExGridIntoIter, <T, S>, T);
 pub struct ExGridCells<'a, T, const S: usize> {
   inner: FlatMap<
     HashMapIter<'a, [i32; 2], Chunk<T, S>>,
-    ComposeExtra<ChunkCells<'a, T, S>, S>,
-    for<'r> fn((&'r [i32; 2], &'r Chunk<T, S>)) -> ComposeExtra<ChunkCells<'r, T, S>, S>
+    Compose<ChunkCells<'a, T, S>, S>,
+    super::FilterCells<T, S>
   >
 }
 
 impl<'a, T, const S: usize> ExGridCells<'a, T, S> {
   pub(crate) fn new<H>(grid: &'a ExGrid<T, S, H>) -> Self {
-    let inner = grid.chunks.iter().flat_map(new_cells as _);
+    let inner = grid.chunks.iter().flat_map(ExGrid::<T, S, H>::NEW_CELLS);
     ExGridCells { inner }
   }
 }
@@ -184,14 +184,14 @@ impl_iterator_no_double_ended!(ExGridCells, <'a, T, S>, ([isize; 2], &'a T));
 pub struct ExGridCellsMut<'a, T, const S: usize> {
   inner: FlatMap<
     HashMapIterMut<'a, [i32; 2], Chunk<T, S>>,
-    ComposeExtra<ChunkCellsMut<'a, T, S>, S>,
-    for<'r> fn((&'r [i32; 2], &'r mut Chunk<T, S>)) -> ComposeExtra<ChunkCellsMut<'r, T, S>, S>
+    Compose<ChunkCellsMut<'a, T, S>, S>,
+    super::FilterCellsMut<T, S>
   >
 }
 
 impl<'a, T, const S: usize> ExGridCellsMut<'a, T, S> {
   pub(crate) fn new<H>(grid: &'a mut ExGrid<T, S, H>) -> Self {
-    let inner = grid.chunks.iter_mut().flat_map(new_cells_mut as _);
+    let inner = grid.chunks.iter_mut().flat_map(ExGrid::<T, S, H>::NEW_CELLS_MUT);
     ExGridCellsMut { inner }
   }
 }
@@ -203,14 +203,14 @@ impl_iterator_no_double_ended!(ExGridCellsMut, <'a, T, S>, ([isize; 2], &'a mut 
 pub struct ExGridIntoCells<T, const S: usize> {
   inner: FlatMap<
     HashMapIntoIter<[i32; 2], Chunk<T, S>>,
-    ComposeExtra<ChunkIntoCells<T, S>, S>,
-    fn(([i32; 2], Chunk<T, S>)) -> ComposeExtra<ChunkIntoCells<T, S>, S>
+    Compose<ChunkIntoCells<T, S>, S>,
+    super::FilterIntoCells<T, S>
   >
 }
 
 impl<T, const S: usize> ExGridIntoCells<T, S> {
   pub(crate) fn new<H>(grid: ExGrid<T, S, H>) -> Self {
-    let inner = grid.chunks.into_iter().flat_map(new_into_cells as _);
+    let inner = grid.chunks.into_iter().flat_map(ExGrid::<T, S, H>::NEW_INTO_CELLS);
     ExGridIntoCells { inner }
   }
 }
@@ -231,19 +231,19 @@ macro_rules! map {
 }
 
 #[derive(Debug, Clone)]
-struct ComposeExtra<I, const S: usize> {
+pub(crate) struct Compose<I, const S: usize> {
   chunk: [i32; 2],
   cells: I
 }
 
-impl<I, const S: usize> ComposeExtra<I, S> {
+impl<I, const S: usize> Compose<I, S> {
   pub fn new<T>(chunk: [i32; 2], cells: I) -> Self
   where I: Iterator<Item = ([usize; 2], T)> {
-    ComposeExtra { chunk, cells }
+    Compose { chunk, cells }
   }
 }
 
-impl<T, I, const S: usize> Iterator for ComposeExtra<I, S>
+impl<T, I, const S: usize> Iterator for Compose<I, S>
 where I: Iterator<Item = ([usize; 2], T)> {
   type Item = ([isize; 2], T);
 
@@ -271,7 +271,7 @@ where I: Iterator<Item = ([usize; 2], T)> {
   }
 }
 
-impl<T, I, const S: usize> DoubleEndedIterator for ComposeExtra<I, S>
+impl<T, I, const S: usize> DoubleEndedIterator for Compose<I, S>
 where I: DoubleEndedIterator<Item = ([usize; 2], T)> + ExactSizeIterator {
   #[inline]
   fn next_back(&mut self) -> Option<Self::Item> {
@@ -292,49 +292,5 @@ where I: DoubleEndedIterator<Item = ([usize; 2], T)> + ExactSizeIterator {
   }
 }
 
-impl<T, I, const S: usize> FusedIterator for ComposeExtra<I, S>
+impl<T, I, const S: usize> FusedIterator for Compose<I, S>
 where I: Iterator<Item = ([usize; 2], T)> + FusedIterator {}
-
-
-
-#[inline]
-fn new_sparse_cells<'a, T, const S: usize>(
-  (&chunk, i): (&'a [i32; 2], &'a ChunkSparse<T, S>)
-) -> ComposeExtra<ChunkSparseCells<'a, T, S>, S> {
-  ComposeExtra::new(chunk, i.cells())
-}
-
-#[inline]
-fn new_sparse_cells_mut<'a, T, const S: usize>(
-  (&chunk, i): (&'a [i32; 2], &'a mut ChunkSparse<T, S>)
-) -> ComposeExtra<ChunkSparseCellsMut<'a, T, S>, S> {
-  ComposeExtra::new(chunk, i.cells_mut())
-}
-
-#[inline]
-fn new_sparse_into_cells<T, const S: usize>(
-  (chunk, i): ([i32; 2], ChunkSparse<T, S>)
-) -> ComposeExtra<ChunkSparseIntoCells<T, S>, S> {
-  ComposeExtra::new(chunk, i.into_cells())
-}
-
-#[inline]
-fn new_cells<'a, T, const S: usize>(
-  (&chunk, i): (&'a [i32; 2], &'a Chunk<T, S>)
-) -> ComposeExtra<ChunkCells<'a, T, S>, S> {
-  ComposeExtra::new(chunk, i.cells())
-}
-
-#[inline]
-fn new_cells_mut<'a, T, const S: usize>(
-  (&chunk, i): (&'a [i32; 2], &'a mut Chunk<T, S>)
-) -> ComposeExtra<ChunkCellsMut<'a, T, S>, S> {
-  ComposeExtra::new(chunk, i.cells_mut())
-}
-
-#[inline]
-fn new_into_cells<T, const S: usize>(
-  (chunk, i): ([i32; 2], Chunk<T, S>)
-) -> ComposeExtra<ChunkIntoCells<T, S>, S> {
-  ComposeExtra::new(chunk, i.into_cells())
-}

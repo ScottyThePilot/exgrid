@@ -107,6 +107,10 @@ impl<T, H, const S: usize> ExGridSparse<T, S, H> {
   pub fn chunks_mut(&mut self) -> HashMapIterMut<[i32; 2], ChunkSparse<T, S>> {
     self.chunks.iter_mut()
   }
+
+  const NEW_SPARSE_CELLS: FilterSparseCells<T, S> = |(&chunk, i)| Compose::new(chunk, ChunkSparseCells::new(i));
+  const NEW_SPARSE_CELLS_MUT: FilterSparseCellsMut<T, S> = |(&chunk, i)| Compose::new(chunk, ChunkSparseCellsMut::new(i));
+  const NEW_SPARSE_INTO_CELLS: FilterSparseIntoCells<T, S> = |(chunk, i)| Compose::new(chunk, ChunkSparseIntoCells::new(i));
 }
 
 impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
@@ -268,6 +272,10 @@ impl<T, H, const S: usize> ExGrid<T, S, H> {
   pub fn chunks_mut(&mut self) -> HashMapIterMut<[i32; 2], Chunk<T, S>> {
     self.chunks.iter_mut()
   }
+
+  const NEW_CELLS: FilterCells<T, S> = |(&chunk, i)| Compose::new(chunk, ChunkCells::new(i));
+  const NEW_CELLS_MUT: FilterCellsMut<T, S> = |(&chunk, i)| Compose::new(chunk, ChunkCellsMut::new(i));
+  const NEW_INTO_CELLS: FilterIntoCells<T, S> = |(chunk, i)| Compose::new(chunk, ChunkIntoCells::new(i));
 }
 
 impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
@@ -365,6 +373,13 @@ impl<T, H, const S: usize> IntoIterator for ExGrid<T, S, H> {
     ExGridIntoIter::new(self)
   }
 }
+
+type FilterSparseCells<T, const S: usize> = for<'r> fn((&'r [i32; 2], &'r ChunkSparse<T, S>)) -> Compose<ChunkSparseCells<'r, T, S>, S>;
+type FilterSparseCellsMut<T, const S: usize> = for<'r> fn((&'r [i32; 2], &'r mut ChunkSparse<T, S>)) -> Compose<ChunkSparseCellsMut<'r, T, S>, S>;
+type FilterSparseIntoCells<T, const S: usize> = fn(([i32; 2], ChunkSparse<T, S>)) -> Compose<ChunkSparseIntoCells<T, S>, S>;
+type FilterCells<T, const S: usize> = for<'r> fn((&'r [i32; 2], &'r Chunk<T, S>)) -> Compose<ChunkCells<'r, T, S>, S>;
+type FilterCellsMut<T, const S: usize> = for<'r> fn((&'r [i32; 2], &'r mut Chunk<T, S>)) -> Compose<ChunkCellsMut<'r, T, S>, S>;
+type FilterIntoCells<T, const S: usize> = fn(([i32; 2], Chunk<T, S>)) -> Compose<ChunkIntoCells<T, S>, S>;
 
 /// Converts global coordinates to coordinates for a single chunk
 /// and coordinates to a cell in that chunk.
