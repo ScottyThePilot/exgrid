@@ -17,10 +17,6 @@ pub trait AutomataRules<const S: usize, H = RandomState> {
   /// Rule that determines the value of a given cell based on the current state of the automata.
   fn simulate(&self, pos: [isize; 2], grid: &ExGrid<Self::Cell, S, H>) -> Self::Cell;
 
-  /// Called once after a step has completed.
-  #[allow(unused_variables)]
-  fn step_completed(&mut self, grid: &ExGrid<Self::Cell, S, H>) {}
-
   /// Rule that determines whether or not a cell is "empty".
   /// A chunk containing empty cells will be erased by [`Automata::clean_up`] if all of its cells pass this check.
   /// Defaults to an implementation that returns `false`.

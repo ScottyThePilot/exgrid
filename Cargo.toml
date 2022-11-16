@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 array-init = "2.0.1"
+rayon = { version = "1.5.3", optional = true }
 
 [dev-dependencies]
 rand = "0.8.5"
@@ -12,3 +13,4 @@ rand = "0.8.5"
 [features]
 default = []
 automata = []
+multi-thread = ["dep:rayon"]
