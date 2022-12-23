@@ -113,6 +113,14 @@ impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
     self.chunks.retain(f);
   }
 
+  pub fn entry(&mut self, pos: [isize; 2]) -> ExGridSparseEntry<T, S> {
+    let (chunk, local) = decompose::<S>(pos);
+    ExGridSparseEntry {
+      entry: self.chunks.entry(chunk),
+      pos: local
+    }
+  }
+
   #[inline]
   pub fn get_chunk(&self, pos: [i32; 2]) -> Option<&ChunkSparse<T, S>> {
     self.chunks.get(&pos)
@@ -178,6 +186,26 @@ impl<T, H, const S: usize> IntoIterator for ExGridSparse<T, S, H> {
   fn into_iter(self) -> Self::IntoIter {
     let inner = self.chunks.into_values().flat_map(ChunkSparse::into_iter as _);
     ExGridSparseIntoIter { inner }
+  }
+}
+
+#[derive(Debug)]
+pub struct ExGridSparseEntry<'a, T, const S: usize> {
+  entry: Entry<'a, [i32; 2], ChunkSparse<T, S>>,
+  pos: [usize; 2]
+}
+
+impl<'a, T, const S: usize> ExGridSparseEntry<'a, T, S> {
+  pub fn or_insert(self, default: ChunkSparse<T, S>) -> &'a mut Option<T> {
+    &mut self.entry.or_insert(default)[self.pos]
+  }
+
+  pub fn or_insert_with<F: FnOnce() -> ChunkSparse<T, S>>(self, default: F) -> &'a mut Option<T> {
+    &mut self.entry.or_insert_with(default)[self.pos]
+  }
+
+  pub fn or_insert_with_key<F: FnOnce([i32; 2]) -> ChunkSparse<T, S>>(self, default: F) -> &'a mut Option<T> {
+    &mut self.entry.or_insert_with_key(move |&k| default(k))[self.pos]
   }
 }
 
@@ -264,6 +292,14 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
     self.chunks.retain(f);
   }
 
+  pub fn entry(&mut self, pos: [isize; 2]) -> ExGridEntry<T, S> {
+    let (chunk, local) = decompose::<S>(pos);
+    ExGridEntry {
+      entry: self.chunks.entry(chunk),
+      pos: local
+    }
+  }
+
   #[inline]
   pub fn get_chunk(&self, pos: [i32; 2]) -> Option<&Chunk<T, S>> {
     self.chunks.get(&pos)
@@ -332,6 +368,28 @@ impl<T, H, const S: usize> IntoIterator for ExGrid<T, S, H> {
     ExGridIntoIter { inner }
   }
 }
+
+#[derive(Debug)]
+pub struct ExGridEntry<'a, T, const S: usize> {
+  entry: Entry<'a, [i32; 2], Chunk<T, S>>,
+  pos: [usize; 2]
+}
+
+impl<'a, T, const S: usize> ExGridEntry<'a, T, S> {
+  pub fn or_insert(self, default: Chunk<T, S>) -> &'a mut T {
+    &mut self.entry.or_insert(default)[self.pos]
+  }
+
+  pub fn or_insert_with<F: FnOnce() -> Chunk<T, S>>(self, default: F) -> &'a mut T {
+    &mut self.entry.or_insert_with(default)[self.pos]
+  }
+
+  pub fn or_insert_with_key<F: FnOnce([i32; 2]) -> Chunk<T, S>>(self, default: F) -> &'a mut T {
+    &mut self.entry.or_insert_with_key(move |&k| default(k))[self.pos]
+  }
+}
+
+
 
 /// Converts global coordinates to coordinates for a single chunk
 /// and coordinates to a cell in that chunk.
