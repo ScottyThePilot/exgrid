@@ -17,6 +17,10 @@ impl<T, const S: usize> ChunkSparse<T, S> {
     Self::default()
   }
 
+  pub fn init<F: FnMut() -> Option<T>>(f: F) -> Self {
+    ChunkSparse { inner: Chunk::init(f) }
+  }
+
   #[doc(hidden)]
   #[deprecated = "use `is_all_vacant` instead"]
   pub fn is_vacant(&self) -> bool {
@@ -137,6 +141,10 @@ impl<T, const S: usize> Chunk<T, S> {
     Self::default()
   }
 
+  pub fn init<F: FnMut() -> T>(f: F) -> Self {
+    Chunk { inner: new_inner(f) }
+  }
+
   pub fn horizontal_slice(&self, y: usize) -> [T; S] where T: Clone {
     self.horizontal_slice_ref(y).clone()
   }
@@ -201,7 +209,7 @@ impl<T, const S: usize> IndexMut<[usize; 2]> for Chunk<T, S> {
 impl<T: Default, const S: usize> Default for Chunk<T, S> {
   #[inline]
   fn default() -> Self {
-    Chunk { inner: default_inner() }
+    Chunk { inner: new_inner(T::default) }
   }
 }
 
@@ -237,10 +245,10 @@ impl<T, const S: usize> IntoIterator for Chunk<T, S> {
 }
 
 // This is necessary due to the array primitive's `Default` impl not actually being generic across all `N`.
-fn default_inner<T: Default, const N: usize>() -> [[T; N]; N] {
+fn new_inner<T, F: FnMut() -> T, const N: usize>(mut f: F) -> [[T; N]; N] {
   array_init::array_init(|_| {
     array_init::array_init(|_| {
-      T::default()
+      f()
     })
   })
 }
