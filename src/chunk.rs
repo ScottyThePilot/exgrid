@@ -175,6 +175,11 @@ type FilterCells<T, const S: usize> = for<'a> fn(([usize; 2], &'a Option<T>)) ->
 type FilterCellsMut<T, const S: usize> = for<'a> fn(([usize; 2], &'a mut Option<T>)) -> Option<([usize; 2], &'a mut T)>;
 type FilterIntoCells<T, const S: usize> = fn(([usize; 2], Option<T>)) -> Option<([usize; 2], T)>;
 
+macro_rules! assert_bounds {
+  (horizontal, $y:expr, $S:expr) => (assert!($y < $S, "index out of bounds: the size is {} but the y-index is {}", $S, $y));
+  (vertical, $x:expr, $S:expr) => (assert!($x < $S, "index out of bounds: the size is {} but the x-index is {}", $S, $x));
+}
+
 
 
 #[repr(transparent)]
@@ -189,22 +194,33 @@ impl<T, const S: usize> Chunk<T, S> {
   }
 
   pub fn horizontal_slice(&self, y: usize) -> [T; S] where T: Clone {
-    self.horizontal_slice_ref(y).clone()
+    assert_bounds!(horizontal, y, S);
+    self.inner[y].clone()
   }
 
   pub fn horizontal_slice_ref(&self, y: usize) -> &[T; S] {
-    assert!(y < S, "index out of bounds: the size is {S} but the y-index is {y}");
+    assert_bounds!(horizontal, y, S);
     &self.inner[y]
   }
 
+  pub(crate) fn horizontal_slice_iter(&self, y: usize) -> impl Iterator<Item = &T> {
+    assert_bounds!(horizontal, y, S);
+    self.inner[y].iter()
+  }
+
   pub fn vertical_slice(&self, x: usize) -> [T; S] where T: Clone {
-    assert!(x < S, "index out of bounds: the size is {S} but the x-index is {x}");
+    assert_bounds!(vertical, x, S);
     array_init::array_init(|y| self.inner[y][x].clone())
   }
 
   pub fn vertical_slice_each_ref(&self, x: usize) -> [&T; S] {
-    assert!(x < S, "index out of bounds: the size is {S} but the x-index is {x}");
+    assert_bounds!(vertical, x, S);
     array_init::array_init(|y| &self.inner[y][x])
+  }
+
+  pub(crate) fn vertical_slice_iter(&self, x: usize) -> impl Iterator<Item = &T> {
+    assert_bounds!(vertical, x, S);
+    (0..S).map(move |y| &self.inner[y][x])
   }
 
   #[inline]
