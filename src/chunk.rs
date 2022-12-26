@@ -1,3 +1,5 @@
+pub use crate::LocalPos;
+
 use std::ops::{Index, IndexMut};
 use std::slice::Iter as ArrayIter;
 use std::slice::IterMut as ArrayIterMut;
@@ -58,36 +60,36 @@ impl<T, const S: usize> ChunkSparse<T, S> {
   }
 
   pub fn cells(&self) -> ChunkSparseCells<T, S> {
-    let f: fn(([usize; 2], &Option<T>)) -> Option<([usize; 2], &T)> = |(i, v)| v.as_ref().map(|v| (i, v));
+    let f: fn((LocalPos, &Option<T>)) -> Option<(LocalPos, &T)> = |(i, v)| v.as_ref().map(|v| (i, v));
     let inner = self.inner.cells().filter_map(f);
     ChunkSparseCells { inner }
   }
 
   pub fn cells_mut(&mut self) -> ChunkSparseCellsMut<T, S> {
-    let f: fn(([usize; 2], &mut Option<T>)) -> Option<([usize; 2], &mut T)> = |(i, v)| v.as_mut().map(|v| (i, v));
+    let f: fn((LocalPos, &mut Option<T>)) -> Option<(LocalPos, &mut T)> = |(i, v)| v.as_mut().map(|v| (i, v));
     let inner = self.inner.cells_mut().filter_map(f);
     ChunkSparseCellsMut { inner }
   }
 
   pub fn into_cells(self) -> ChunkSparseIntoCells<T, S> {
-    let f: fn(([usize; 2], Option<T>)) -> Option<([usize; 2], T)> = |(i, v)| v.map(|v| (i, v));
+    let f: fn((LocalPos, Option<T>)) -> Option<(LocalPos, T)> = |(i, v)| v.map(|v| (i, v));
     let inner = self.inner.into_cells().filter_map(f);
     ChunkSparseIntoCells { inner }
   }
 }
 
-impl<T, const S: usize> Index<[usize; 2]> for ChunkSparse<T, S> {
+impl<T, const S: usize> Index<LocalPos> for ChunkSparse<T, S> {
   type Output = Option<T>;
 
   #[inline]
-  fn index(&self, pos: [usize; 2]) -> &Option<T> {
+  fn index(&self, pos: LocalPos) -> &Option<T> {
     &self.inner[pos]
   }
 }
 
-impl<T, const S: usize> IndexMut<[usize; 2]> for ChunkSparse<T, S> {
+impl<T, const S: usize> IndexMut<LocalPos> for ChunkSparse<T, S> {
   #[inline]
-  fn index_mut(&mut self, pos: [usize; 2]) -> &mut Option<T> {
+  fn index_mut(&mut self, pos: LocalPos) -> &mut Option<T> {
     &mut self.inner[pos]
   }
 }
@@ -190,18 +192,18 @@ impl<T, const S: usize> Chunk<T, S> {
   }
 }
 
-impl<T, const S: usize> Index<[usize; 2]> for Chunk<T, S> {
+impl<T, const S: usize> Index<LocalPos> for Chunk<T, S> {
   type Output = T;
 
   #[inline]
-  fn index(&self, [x, y]: [usize; 2]) -> &T {
+  fn index(&self, [x, y]: LocalPos) -> &T {
     &self.inner[y][x]
   }
 }
 
-impl<T, const S: usize> IndexMut<[usize; 2]> for Chunk<T, S> {
+impl<T, const S: usize> IndexMut<LocalPos> for Chunk<T, S> {
   #[inline]
-  fn index_mut(&mut self, [x, y]: [usize; 2]) -> &mut T {
+  fn index_mut(&mut self, [x, y]: LocalPos) -> &mut T {
     &mut self.inner[y][x]
   }
 }
@@ -311,33 +313,33 @@ impl_iterator!(ChunkSparseIntoIter, <T, S>, T, (0, Some(S * S)));
 pub struct ChunkSparseCells<'a, T, const S: usize> {
   inner: FilterMap<
     ChunkCells<'a, Option<T>, S>,
-    fn(([usize; 2], &Option<T>)) -> Option<([usize; 2], &T)>
+    fn((LocalPos, &Option<T>)) -> Option<(LocalPos, &T)>
   >
 }
 
-impl_iterator!(ChunkSparseCells, <'a, T, S>, ([usize; 2], &'a T), (0, Some(S * S)));
+impl_iterator!(ChunkSparseCells, <'a, T, S>, (LocalPos, &'a T), (0, Some(S * S)));
 
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct ChunkSparseCellsMut<'a, T, const S: usize> {
   inner: FilterMap<
     ChunkCellsMut<'a, Option<T>, S>,
-    fn(([usize; 2], &mut Option<T>)) -> Option<([usize; 2], &mut T)>
+    fn((LocalPos, &mut Option<T>)) -> Option<(LocalPos, &mut T)>
   >
 }
 
-impl_iterator!(ChunkSparseCellsMut, <'a, T, S>, ([usize; 2], &'a mut T), (0, Some(S * S)));
+impl_iterator!(ChunkSparseCellsMut, <'a, T, S>, (LocalPos, &'a mut T), (0, Some(S * S)));
 
 #[repr(transparent)]
 #[derive(Debug, Clone)]
 pub struct ChunkSparseIntoCells<T, const S: usize> {
   inner: FilterMap<
     ChunkIntoCells<Option<T>, S>,
-    fn(([usize; 2], Option<T>)) -> Option<([usize; 2], T)>
+    fn((LocalPos, Option<T>)) -> Option<(LocalPos, T)>
   >
 }
 
-impl_iterator!(ChunkSparseIntoCells, <T, S>, ([usize; 2], T), (0, Some(S * S)));
+impl_iterator!(ChunkSparseIntoCells, <T, S>, (LocalPos, T), (0, Some(S * S)));
 
 
 
@@ -371,7 +373,7 @@ pub struct ChunkCells<'a, T, const S: usize> {
   inner: Enumerate2<ArrayIter<'a, T>, S>
 }
 
-impl_iterator_known_size!(ChunkCells, <'a, T, S>, ([usize; 2], &'a T), S * S);
+impl_iterator_known_size!(ChunkCells, <'a, T, S>, (LocalPos, &'a T), S * S);
 
 #[repr(transparent)]
 #[derive(Debug)]
@@ -379,7 +381,7 @@ pub struct ChunkCellsMut<'a, T, const S: usize> {
   inner: Enumerate2<ArrayIterMut<'a, T>, S>
 }
 
-impl_iterator_known_size!(ChunkCellsMut, <'a, T, S>, ([usize; 2], &'a mut T), S * S);
+impl_iterator_known_size!(ChunkCellsMut, <'a, T, S>, (LocalPos, &'a mut T), S * S);
 
 #[repr(transparent)]
 #[derive(Debug, Clone)]
@@ -387,7 +389,7 @@ pub struct ChunkIntoCells<T, const S: usize> {
   inner: Enumerate2<ArrayIntoIter<T>, S>
 }
 
-impl_iterator_known_size!(ChunkIntoCells, <T, S>, ([usize; 2], T), S * S);
+impl_iterator_known_size!(ChunkIntoCells, <T, S>, (LocalPos, T), S * S);
 
 
 
@@ -416,7 +418,7 @@ impl<I, const S: usize> Enumerate2<I, S> {
 
 impl<I, T, const S: usize> Iterator for Enumerate2<I, S>
 where I: Iterator<Item = T> {
-  type Item = ([usize; 2], T);
+  type Item = (LocalPos, T);
 
   fn next(&mut self) -> Option<Self::Item> {
     map!(S, self.inner.next())

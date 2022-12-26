@@ -1,3 +1,5 @@
+use vecmath::vec2_add;
+
 use crate::chunk::*;
 use crate::grid::*;
 
@@ -15,7 +17,7 @@ pub trait AutomataRules<const S: usize, H = RandomState> {
   fn expansion(&self, chunk: &Chunk<Self::Cell, S>) -> Expansion8;
 
   /// Rule that determines the value of a given cell based on the current state of the automata.
-  fn simulate(&self, pos: [isize; 2], grid: &ExGrid<Self::Cell, S, H>) -> Self::Cell;
+  fn simulate(&self, pos: crate::GlobalPos, grid: &ExGrid<Self::Cell, S, H>) -> Self::Cell;
 
   /// Called once after a step has completed.
   #[allow(unused_variables)]
@@ -137,14 +139,14 @@ pub struct Expansion8 {
 impl Expansion8 {
   pub(crate) fn apply<F>(self, pos: [i32; 2], mut f: F)
   where F: FnMut([i32; 2]) {
-    if self.nn { f(add(pos, [0, -1])) };
-    if self.ne { f(add(pos, [1, -1])) };
-    if self.ee { f(add(pos, [1, 0])) };
-    if self.se { f(add(pos, [1, 1])) };
-    if self.ss { f(add(pos, [0, 1])) };
-    if self.sw { f(add(pos, [-1, 1])) };
-    if self.ww { f(add(pos, [-1, 0])) };
-    if self.nw { f(add(pos, [-1, -1])) };
+    if self.nn { f(vec2_add(pos, [0, -1])) };
+    if self.ne { f(vec2_add(pos, [1, -1])) };
+    if self.ee { f(vec2_add(pos, [1, 0])) };
+    if self.se { f(vec2_add(pos, [1, 1])) };
+    if self.ss { f(vec2_add(pos, [0, 1])) };
+    if self.sw { f(vec2_add(pos, [-1, 1])) };
+    if self.ww { f(vec2_add(pos, [-1, 0])) };
+    if self.nw { f(vec2_add(pos, [-1, -1])) };
   }
 
   pub(crate) fn apply_with_center<F>(self, pos: [i32; 2], mut f: F)
@@ -167,8 +169,4 @@ impl Default for Expansion8 {
       nw: false
     }
   }
-}
-
-fn add(a: [i32; 2], b: [i32; 2]) -> [i32; 2] {
-  [a[0] + b[0], a[1] + b[1]]
 }
