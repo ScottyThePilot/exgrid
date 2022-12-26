@@ -7,7 +7,7 @@ use std::mem::swap;
 
 
 
-pub trait AutomataRules<const S: usize, H = RandomState> {
+pub trait AutomataRules<const S: usize> {
   type Cell: Default + Clone;
 
   /// Rule that determines when new neighboring chunks should be created in order to
@@ -15,7 +15,7 @@ pub trait AutomataRules<const S: usize, H = RandomState> {
   fn expansion(&self, chunk: &Chunk<Self::Cell, S>) -> Expansion8;
 
   /// Rule that determines the value of a given cell based on the current state of the automata.
-  fn simulate(&self, pos: [isize; 2], grid: &ExGrid<Self::Cell, S, H>) -> Self::Cell;
+  fn simulate<H>(&self, pos: [isize; 2], grid: &ExGrid<Self::Cell, S, H>) -> Self::Cell;
 
   /// Rule that determines whether or not a cell is "empty".
   /// A chunk containing empty cells will be erased by [`Automata::clean_up`] if all of its cells pass this check.
@@ -26,12 +26,12 @@ pub trait AutomataRules<const S: usize, H = RandomState> {
   }
 }
 
-pub struct Automata<A: AutomataRules<S, H>, const S: usize, H = RandomState> {
+pub struct Automata<A: AutomataRules<S>, const S: usize, H = RandomState> {
   automata_rules: A,
   state: ExGrid<A::Cell, S, H>
 }
 
-impl<A: AutomataRules<S, H>, H: BuildHasher, const S: usize> Automata<A, S, H> {
+impl<A: AutomataRules<S>, H: BuildHasher, const S: usize> Automata<A, S, H> {
   pub fn new(automata_rules: A) -> Self where H: Default {
     Self::with_state(automata_rules, ExGrid::new())
   }
@@ -40,12 +40,16 @@ impl<A: AutomataRules<S, H>, H: BuildHasher, const S: usize> Automata<A, S, H> {
     Automata { automata_rules, state }
   }
 
+  /// Advances the cellular automata forward by one step.
   pub fn step(&mut self)
   where A::Cell: Default, H: Default {
     let mut scratch = ExGrid::new();
     self.step_scratch(&mut scratch);
   }
 
+  /// Advances the cellular automata forward by one step.
+  /// A reference to a grid must be provided for use as scratch state.
+  /// The previous state will be written into the scratch state.
   pub fn step_scratch(&mut self, scratch: &mut ExGrid<A::Cell, S, H>)
   where A::Cell: Default {
     scratch.clear();
@@ -103,17 +107,13 @@ pub struct Expansion4 {
   pub west: bool
 }
 
-impl From<Expansion4> for Expansion8 {
-  fn from(expansion4: Expansion4) -> Self {
-    Expansion8 {
-      nn: expansion4.north,
-      ss: expansion4.south,
-      ee: expansion4.east,
-      ww: expansion4.west,
-      ne: expansion4.north && expansion4.east,
-      se: expansion4.south && expansion4.east,
-      sw: expansion4.south && expansion4.west,
-      nw: expansion4.north && expansion4.west
+impl Default for Expansion4 {
+  fn default() -> Self {
+    Expansion4 {
+      north: false,
+      south: false,
+      east: false,
+      west: false
     }
   }
 }
@@ -150,6 +150,21 @@ impl Expansion8 {
   }
 }
 
+impl From<Expansion4> for Expansion8 {
+  fn from(expansion4: Expansion4) -> Self {
+    Expansion8 {
+      nn: expansion4.north,
+      ss: expansion4.south,
+      ee: expansion4.east,
+      ww: expansion4.west,
+      ne: expansion4.north && expansion4.east,
+      se: expansion4.south && expansion4.east,
+      sw: expansion4.south && expansion4.west,
+      nw: expansion4.north && expansion4.west
+    }
+  }
+}
+
 impl Default for Expansion8 {
   fn default() -> Self {
     Expansion8 {
@@ -167,4 +182,20 @@ impl Default for Expansion8 {
 
 fn add(a: [i32; 2], b: [i32; 2]) -> [i32; 2] {
   [a[0] + b[0], a[1] + b[1]]
+}
+
+/// This function checks the edges of a given chunk, if any cells on a given edge
+/// fail to pass the provided rules' `empty_cell` check, that edge is marked.
+/// I.e. if the top edge of the provided chunk has one cell that fails the `empty_cell` check,
+/// then `nn` (north) will be set to `true` on the returned `Expansion8`.
+pub fn edges_not_empty_expansion<A, const S: usize>(rules: &A, chunk: &Chunk<A::Cell, S>) -> Expansion8
+where A: AutomataRules<S> {
+  let s = S - 1;
+  let pred = |cell: &A::Cell| !rules.empty_cell(cell);
+  Expansion8::from(Expansion4 {
+    north: chunk.horizontal_slice_iter(0).any(pred),
+    south: chunk.horizontal_slice_iter(s).any(pred),
+    west: chunk.vertical_slice_iter(0).any(pred),
+    east: chunk.vertical_slice_iter(s).any(pred),
+  })
 }
