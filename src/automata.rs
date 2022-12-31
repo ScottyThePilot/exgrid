@@ -1,3 +1,4 @@
+use crate::{GlobalPos, ChunkPos};
 use crate::chunk::*;
 use crate::grid::*;
 
@@ -15,7 +16,7 @@ pub trait AutomataRules<const S: usize> {
   fn expansion(&self, chunk: &Chunk<Self::Cell, S>) -> Expansion8;
 
   /// Rule that determines the value of a given cell based on the current state of the automata.
-  fn simulate<H>(&self, pos: [isize; 2], grid: &ExGrid<Self::Cell, S, H>) -> Self::Cell;
+  fn simulate<H>(&self, pos: GlobalPos, grid: &ExGrid<Self::Cell, S, H>) -> Self::Cell;
 
   /// Rule that determines whether or not a cell is "empty".
   /// A chunk containing empty cells will be erased by [`Automata::clean_up`] if all of its cells pass this check.
@@ -131,20 +132,20 @@ pub struct Expansion8 {
 }
 
 impl Expansion8 {
-  pub(crate) fn apply<F>(self, pos: [i32; 2], mut f: F)
-  where F: FnMut([i32; 2]) {
-    if self.nn { f(add(pos, [0, -1])) };
-    if self.ne { f(add(pos, [1, -1])) };
-    if self.ee { f(add(pos, [1, 0])) };
-    if self.se { f(add(pos, [1, 1])) };
-    if self.ss { f(add(pos, [0, 1])) };
-    if self.sw { f(add(pos, [-1, 1])) };
-    if self.ww { f(add(pos, [-1, 0])) };
-    if self.nw { f(add(pos, [-1, -1])) };
+  pub(crate) fn apply<F>(self, pos: ChunkPos, mut f: F)
+  where F: FnMut(ChunkPos) {
+    if self.nn { f(pos + [0, -1]) };
+    if self.ne { f(pos + [1, -1]) };
+    if self.ee { f(pos + [1, 0]) };
+    if self.se { f(pos + [1, 1]) };
+    if self.ss { f(pos + [0, 1]) };
+    if self.sw { f(pos + [-1, 1]) };
+    if self.ww { f(pos + [-1, 0]) };
+    if self.nw { f(pos + [-1, -1]) };
   }
 
-  pub(crate) fn apply_with_center<F>(self, pos: [i32; 2], mut f: F)
-  where F: FnMut([i32; 2]) {
+  pub(crate) fn apply_with_center<F>(self, pos: ChunkPos, mut f: F)
+  where F: FnMut(ChunkPos) {
     f(pos);
     self.apply(pos, f);
   }
@@ -178,10 +179,6 @@ impl Default for Expansion8 {
       nw: false
     }
   }
-}
-
-fn add(a: [i32; 2], b: [i32; 2]) -> [i32; 2] {
-  [a[0] + b[0], a[1] + b[1]]
 }
 
 /// This function checks the edges of a given chunk, if any cells on a given edge

@@ -1,4 +1,5 @@
 use super::{ExGrid, ExGridSparse};
+use crate::{GlobalPos, ChunkPos, LocalPos};
 use crate::chunk::*;
 
 use std::collections::hash_map::{
@@ -14,7 +15,7 @@ use std::iter::{Flatten, FlatMap, FusedIterator};
 #[repr(transparent)]
 #[derive(Debug, Clone)]
 pub struct ExGridSparseIter<'a, T, const S: usize> {
-  inner: Flatten<HashMapValues<'a, [i32; 2], ChunkSparse<T, S>>>
+  inner: Flatten<HashMapValues<'a, ChunkPos, ChunkSparse<T, S>>>
 }
 
 impl<'a, T, const S: usize> ExGridSparseIter<'a, T, S> {
@@ -29,7 +30,7 @@ impl_iterator_no_double_ended!(ExGridSparseIter, <'a, T, S>, &'a T);
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct ExGridSparseIterMut<'a, T, const S: usize> {
-  inner: Flatten<HashMapValuesMut<'a, [i32; 2], ChunkSparse<T, S>>>
+  inner: Flatten<HashMapValuesMut<'a, ChunkPos, ChunkSparse<T, S>>>
 }
 
 impl<'a, T, const S: usize> ExGridSparseIterMut<'a, T, S> {
@@ -44,7 +45,7 @@ impl_iterator_no_double_ended!(ExGridSparseIterMut, <'a, T, S>, &'a mut T);
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct ExGridSparseIntoIter<T, const S: usize> {
-  inner: Flatten<HashMapIntoValues<[i32; 2], ChunkSparse<T, S>>>
+  inner: Flatten<HashMapIntoValues<ChunkPos, ChunkSparse<T, S>>>
 }
 
 impl<T, const S: usize> ExGridSparseIntoIter<T, S> {
@@ -60,7 +61,7 @@ impl_iterator_no_double_ended!(ExGridSparseIntoIter, <T, S>, T);
 #[derive(Debug, Clone)]
 pub struct ExGridSparseCells<'a, T, const S: usize> {
   inner: FlatMap<
-    HashMapIter<'a, [i32; 2], ChunkSparse<T, S>>,
+    HashMapIter<'a, ChunkPos, ChunkSparse<T, S>>,
     Compose<ChunkSparseCells<'a, T, S>, S>,
     super::FilterSparseCells<T, S>
   >
@@ -73,13 +74,13 @@ impl<'a, T, const S: usize> ExGridSparseCells<'a, T, S> {
   }
 }
 
-impl_iterator_no_double_ended!(ExGridSparseCells, <'a, T, S>, ([isize; 2], &'a T));
+impl_iterator_no_double_ended!(ExGridSparseCells, <'a, T, S>, (GlobalPos, &'a T));
 
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct ExGridSparseCellsMut<'a, T, const S: usize> {
   inner: FlatMap<
-    HashMapIterMut<'a, [i32; 2], ChunkSparse<T, S>>,
+    HashMapIterMut<'a, ChunkPos, ChunkSparse<T, S>>,
     Compose<ChunkSparseCellsMut<'a, T, S>, S>,
     super::FilterSparseCellsMut<T, S>
   >
@@ -92,13 +93,13 @@ impl<'a, T, const S: usize> ExGridSparseCellsMut<'a, T, S> {
   }
 }
 
-impl_iterator_no_double_ended!(ExGridSparseCellsMut, <'a, T, S>, ([isize; 2], &'a mut T));
+impl_iterator_no_double_ended!(ExGridSparseCellsMut, <'a, T, S>, (GlobalPos, &'a mut T));
 
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct ExGridSparseIntoCells<T, const S: usize> {
   inner: FlatMap<
-    HashMapIntoIter<[i32; 2], ChunkSparse<T, S>>,
+    HashMapIntoIter<ChunkPos, ChunkSparse<T, S>>,
     Compose<ChunkSparseIntoCells<T, S>, S>,
     super::FilterSparseIntoCells<T, S>
   >
@@ -111,14 +112,14 @@ impl<T, const S: usize> ExGridSparseIntoCells<T, S> {
   }
 }
 
-impl_iterator_no_double_ended!(ExGridSparseIntoCells, <T, S>, ([isize; 2], T));
+impl_iterator_no_double_ended!(ExGridSparseIntoCells, <T, S>, (GlobalPos, T));
 
 
 
 #[repr(transparent)]
 #[derive(Debug, Clone)]
 pub struct ExGridIter<'a, T, const S: usize> {
-  inner: Flatten<HashMapValues<'a, [i32; 2], Chunk<T, S>>>
+  inner: Flatten<HashMapValues<'a, ChunkPos, Chunk<T, S>>>
 }
 
 impl<'a, T, const S: usize> ExGridIter<'a, T, S> {
@@ -133,7 +134,7 @@ impl_iterator_no_double_ended!(ExGridIter, <'a, T, S>, &'a T);
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct ExGridIterMut<'a, T, const S: usize> {
-  inner: Flatten<HashMapValuesMut<'a, [i32; 2], Chunk<T, S>>>
+  inner: Flatten<HashMapValuesMut<'a, ChunkPos, Chunk<T, S>>>
 }
 
 impl<'a, T, const S: usize> ExGridIterMut<'a, T, S> {
@@ -148,7 +149,7 @@ impl_iterator_no_double_ended!(ExGridIterMut, <'a, T, S>, &'a mut T);
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct ExGridIntoIter<T, const S: usize> {
-  inner: Flatten<HashMapIntoValues<[i32; 2], Chunk<T, S>>>
+  inner: Flatten<HashMapIntoValues<ChunkPos, Chunk<T, S>>>
 }
 
 impl<T, const S: usize> ExGridIntoIter<T, S> {
@@ -164,7 +165,7 @@ impl_iterator_no_double_ended!(ExGridIntoIter, <T, S>, T);
 #[derive(Debug, Clone)]
 pub struct ExGridCells<'a, T, const S: usize> {
   inner: FlatMap<
-    HashMapIter<'a, [i32; 2], Chunk<T, S>>,
+    HashMapIter<'a, ChunkPos, Chunk<T, S>>,
     Compose<ChunkCells<'a, T, S>, S>,
     super::FilterCells<T, S>
   >
@@ -177,13 +178,13 @@ impl<'a, T, const S: usize> ExGridCells<'a, T, S> {
   }
 }
 
-impl_iterator_no_double_ended!(ExGridCells, <'a, T, S>, ([isize; 2], &'a T));
+impl_iterator_no_double_ended!(ExGridCells, <'a, T, S>, (GlobalPos, &'a T));
 
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct ExGridCellsMut<'a, T, const S: usize> {
   inner: FlatMap<
-    HashMapIterMut<'a, [i32; 2], Chunk<T, S>>,
+    HashMapIterMut<'a, ChunkPos, Chunk<T, S>>,
     Compose<ChunkCellsMut<'a, T, S>, S>,
     super::FilterCellsMut<T, S>
   >
@@ -196,13 +197,13 @@ impl<'a, T, const S: usize> ExGridCellsMut<'a, T, S> {
   }
 }
 
-impl_iterator_no_double_ended!(ExGridCellsMut, <'a, T, S>, ([isize; 2], &'a mut T));
+impl_iterator_no_double_ended!(ExGridCellsMut, <'a, T, S>, (GlobalPos, &'a mut T));
 
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct ExGridIntoCells<T, const S: usize> {
   inner: FlatMap<
-    HashMapIntoIter<[i32; 2], Chunk<T, S>>,
+    HashMapIntoIter<ChunkPos, Chunk<T, S>>,
     Compose<ChunkIntoCells<T, S>, S>,
     super::FilterIntoCells<T, S>
   >
@@ -215,7 +216,7 @@ impl<T, const S: usize> ExGridIntoCells<T, S> {
   }
 }
 
-impl_iterator_no_double_ended!(ExGridIntoCells, <T, S>, ([isize; 2], T));
+impl_iterator_no_double_ended!(ExGridIntoCells, <T, S>, (GlobalPos, T));
 
 
 
@@ -232,20 +233,20 @@ macro_rules! map {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Compose<I, const S: usize> {
-  chunk: [i32; 2],
+  chunk: ChunkPos,
   cells: I
 }
 
 impl<I, const S: usize> Compose<I, S> {
-  pub fn new<T>(chunk: [i32; 2], cells: I) -> Self
-  where I: Iterator<Item = ([usize; 2], T)> {
+  pub fn new<T>(chunk: ChunkPos, cells: I) -> Self
+  where I: Iterator<Item = (LocalPos, T)> {
     Compose { chunk, cells }
   }
 }
 
 impl<T, I, const S: usize> Iterator for Compose<I, S>
-where I: Iterator<Item = ([usize; 2], T)> {
-  type Item = ([isize; 2], T);
+where I: Iterator<Item = (LocalPos, T)> {
+  type Item = (GlobalPos, T);
 
   #[inline]
   fn next(&mut self) -> Option<Self::Item> {
@@ -272,7 +273,7 @@ where I: Iterator<Item = ([usize; 2], T)> {
 }
 
 impl<T, I, const S: usize> DoubleEndedIterator for Compose<I, S>
-where I: DoubleEndedIterator<Item = ([usize; 2], T)> + ExactSizeIterator {
+where I: DoubleEndedIterator<Item = (LocalPos, T)> + ExactSizeIterator {
   #[inline]
   fn next_back(&mut self) -> Option<Self::Item> {
     map!(self.chunk, self.cells.next_back(), S)
@@ -293,4 +294,4 @@ where I: DoubleEndedIterator<Item = ([usize; 2], T)> + ExactSizeIterator {
 }
 
 impl<T, I, const S: usize> FusedIterator for Compose<I, S>
-where I: Iterator<Item = ([usize; 2], T)> + FusedIterator {}
+where I: Iterator<Item = (LocalPos, T)> + FusedIterator {}

@@ -1,4 +1,5 @@
 use super::{Chunk, ChunkSparse};
+use crate::LocalPos;
 
 use std::iter::{Enumerate, FilterMap, Flatten, FusedIterator};
 
@@ -73,7 +74,7 @@ impl<'a, T, const S: usize> ChunkSparseCells<'a, T, S> {
   }
 }
 
-impl_iterator!(ChunkSparseCells, <'a, T, S>, ([usize; 2], &'a T), (0, Some(S * S)));
+impl_iterator!(ChunkSparseCells, <'a, T, S>, (LocalPos, &'a T), (0, Some(S * S)));
 
 /// An 'enumerating' iterator over all of the occupied cells in a sparse chunk.
 /// Yields the position of the cell along with a mutable reference to the cell's value.
@@ -91,7 +92,7 @@ impl<'a, T, const S: usize> ChunkSparseCellsMut<'a, T, S> {
   }
 }
 
-impl_iterator!(ChunkSparseCellsMut, <'a, T, S>, ([usize; 2], &'a mut T), (0, Some(S * S)));
+impl_iterator!(ChunkSparseCellsMut, <'a, T, S>, (LocalPos, &'a mut T), (0, Some(S * S)));
 
 /// An 'enumerating' iterator over all of the occupied cells in a sparse chunk.
 /// Yields the position of the cell along with the cell's value.
@@ -109,7 +110,7 @@ impl<T, const S: usize> ChunkSparseIntoCells<T, S> {
   }
 }
 
-impl_iterator!(ChunkSparseIntoCells, <T, S>, ([usize; 2], T), (0, Some(S * S)));
+impl_iterator!(ChunkSparseIntoCells, <T, S>, (LocalPos, T), (0, Some(S * S)));
 
 
 
@@ -181,7 +182,7 @@ impl<'a, T, const S: usize> ChunkCells<'a, T, S> {
   }
 }
 
-impl_iterator_known_size!(ChunkCells, <'a, T, S>, ([usize; 2], &'a T), S * S);
+impl_iterator_known_size!(ChunkCells, <'a, T, S>, (LocalPos, &'a T), S * S);
 
 /// An 'enumerating' iterator over all of the cells in a chunk.
 /// Yields the position of the cell along with a mutable reference to the cell's value.
@@ -198,7 +199,7 @@ impl<'a, T, const S: usize> ChunkCellsMut<'a, T, S> {
   }
 }
 
-impl_iterator_known_size!(ChunkCellsMut, <'a, T, S>, ([usize; 2], &'a mut T), S * S);
+impl_iterator_known_size!(ChunkCellsMut, <'a, T, S>, (LocalPos, &'a mut T), S * S);
 
 /// An 'enumerating' iterator over all of the cells in a chunk.
 /// Yields the position of the cell along with the cell's value.
@@ -215,7 +216,7 @@ impl<T, const S: usize> ChunkIntoCells<T, S> {
   }
 }
 
-impl_iterator_known_size!(ChunkIntoCells, <T, S>, ([usize; 2], T), S * S);
+impl_iterator_known_size!(ChunkIntoCells, <T, S>, (LocalPos, T), S * S);
 
 
 
@@ -223,7 +224,7 @@ macro_rules! map {
   ($S:expr, $expr:expr) => {
     match $expr {
       Some((i, item)) => {
-        Some(([i % $S, i / $S], item))
+        Some((LocalPos::new(i % $S, i / $S), item))
       },
       None => None
     }
@@ -244,7 +245,7 @@ impl<I, const S: usize> Enumerate2<I, S> {
 
 impl<I, T, const S: usize> Iterator for Enumerate2<I, S>
 where I: Iterator<Item = T> {
-  type Item = ([usize; 2], T);
+  type Item = (LocalPos, T);
 
   fn next(&mut self) -> Option<Self::Item> {
     map!(S, self.inner.next())
@@ -264,7 +265,7 @@ where I: Iterator<Item = T> {
   fn fold<A, F>(self, init: A, mut f: F) -> A
   where F: FnMut(A, Self::Item) -> A {
     self.inner.fold(init, |a, (i, item)| {
-      f(a, ([i % S, i / S], item))
+      f(a, (LocalPos::new(i % S, i / S), item))
     })
   }
 }
@@ -285,7 +286,7 @@ where I: DoubleEndedIterator<Item = T> + ExactSizeIterator {
   fn rfold<A, F>(self, init: A, mut f: F) -> A
   where F: FnMut(A, Self::Item) -> A {
     self.inner.rfold(init, |a, (i, item)| {
-      f(a, ([i % S, i / S], item))
+      f(a, (LocalPos::new(i % S, i / S), item))
     })
   }
 }

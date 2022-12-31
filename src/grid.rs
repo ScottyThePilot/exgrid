@@ -1,6 +1,7 @@
 mod iter;
 
 pub use self::iter::*;
+use crate::{GlobalPos, ChunkPos, LocalPos};
 use crate::chunk::*;
 
 #[cfg(feature = "multi-thread")]
@@ -26,7 +27,7 @@ use std::mem::replace;
 
 #[derive(Debug, Clone)]
 pub struct ExGridSparse<T, const S: usize, H = RandomState> {
-  chunks: HashMap<[i32; 2], ChunkSparse<T, S>, H>
+  chunks: HashMap<ChunkPos, ChunkSparse<T, S>, H>
 }
 
 impl<T, H, const S: usize> ExGridSparse<T, S, H> {
@@ -58,18 +59,18 @@ impl<T, H, const S: usize> ExGridSparse<T, S, H> {
   }
 
   /// Returns two points `(min, max)` that bound a box containing the all chunks in this grid.
-  pub fn chunks_bounds(&self) -> Option<([i32; 2], [i32; 2])> {
+  pub fn chunks_bounds(&self) -> Option<(ChunkPos, ChunkPos)> {
     chunks_bounds(&self.chunks)
   }
 
   /// Returns two points `(min, max)` that bound a box containing all possible cells of this grid.
   /// This is "naive" because it may overestimate.
-  pub fn naive_bounds(&self) -> Option<([isize; 2], [isize; 2])> {
+  pub fn naive_bounds(&self) -> Option<(GlobalPos, GlobalPos)> {
     self.chunks_bounds().map(map_total_bounds::<S>)
   }
 
   pub fn retain<F>(&mut self, f: F)
-  where F: FnMut(&[i32; 2], &mut ChunkSparse<T, S>) -> bool {
+  where F: FnMut(&ChunkPos, &mut ChunkSparse<T, S>) -> bool {
     self.chunks.retain(f);
   }
 
@@ -99,12 +100,12 @@ impl<T, H, const S: usize> ExGridSparse<T, S, H> {
   }
 
   #[inline]
-  pub fn chunks(&self) -> HashMapIter<[i32; 2], ChunkSparse<T, S>> {
+  pub fn chunks(&self) -> HashMapIter<ChunkPos, ChunkSparse<T, S>> {
     self.chunks.iter()
   }
 
   #[inline]
-  pub fn chunks_mut(&mut self) -> HashMapIterMut<[i32; 2], ChunkSparse<T, S>> {
+  pub fn chunks_mut(&mut self) -> HashMapIterMut<ChunkPos, ChunkSparse<T, S>> {
     self.chunks.iter_mut()
   }
 
@@ -115,60 +116,60 @@ impl<T, H, const S: usize> ExGridSparse<T, S, H> {
 
 impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
   /// Gets a reference to the value of a cell if it or the chunk it is located in exists.
-  pub fn get(&self, pos: [isize; 2]) -> Option<&T> {
+  pub fn get(&self, pos: GlobalPos) -> Option<&T> {
     let (chunk, local) = decompose::<S>(pos);
     self.get_chunk(chunk)?[local].as_ref()
   }
 
   /// Gets a mutable reference to the value of a cell if it or the chunk it is located in exists.
-  pub fn get_mut(&mut self, pos: [isize; 2]) -> Option<&mut T> {
+  pub fn get_mut(&mut self, pos: GlobalPos) -> Option<&mut T> {
     let (chunk, local) = decompose::<S>(pos);
     self.get_chunk_mut(chunk)?[local].as_mut()
   }
 
   /// Gets a mutable reference to a cell, creating a chunk if necessary.
-  pub fn get_mut_default(&mut self, pos: [isize; 2]) -> &mut Option<T> {
+  pub fn get_mut_default(&mut self, pos: GlobalPos) -> &mut Option<T> {
     let (chunk, local) = decompose::<S>(pos);
     &mut self.get_chunk_default(chunk)[local]
   }
 
   /// Sets the value of a given cell, creating a chunk if necessary,
   /// returning any contained value if present.
-  pub fn insert(&mut self, pos: [isize; 2], value: T) -> Option<T> {
+  pub fn insert(&mut self, pos: GlobalPos, value: T) -> Option<T> {
     replace(self.get_mut_default(pos), Some(value))
   }
 
-  pub fn get_chunk(&self, pos: [i32; 2]) -> Option<&ChunkSparse<T, S>> {
+  pub fn get_chunk(&self, pos: ChunkPos) -> Option<&ChunkSparse<T, S>> {
     self.chunks.get(&pos)
   }
 
-  pub fn get_chunk_mut(&mut self, pos: [i32; 2]) -> Option<&mut ChunkSparse<T, S>> {
+  pub fn get_chunk_mut(&mut self, pos: ChunkPos) -> Option<&mut ChunkSparse<T, S>> {
     self.chunks.get_mut(&pos)
   }
 
-  pub fn get_chunk_default(&mut self, pos: [i32; 2]) -> &mut ChunkSparse<T, S> {
+  pub fn get_chunk_default(&mut self, pos: ChunkPos) -> &mut ChunkSparse<T, S> {
     self.get_chunk_entry(pos).or_default()
   }
 
-  pub fn get_chunk_entry(&mut self, pos: [i32; 2]) -> Entry<[i32; 2], ChunkSparse<T, S>> {
+  pub fn get_chunk_entry(&mut self, pos: ChunkPos) -> Entry<ChunkPos, ChunkSparse<T, S>> {
     self.chunks.entry(pos)
   }
 
   #[cfg(feature = "multi-thread")]
   #[inline]
-  pub fn par_chunks(&self) -> HashMapIterPar<[i32; 2], ChunkSparse<T, S>>
+  pub fn par_chunks(&self) -> HashMapIterPar<ChunkPos, ChunkSparse<T, S>>
   where T: Sync {
     self.chunks.par_iter()
   }
 
   #[cfg(feature = "multi-thread")]
   #[inline]
-  pub fn par_chunks_mut(&mut self) -> HashMapIterMutPar<[i32; 2], ChunkSparse<T, S>>
+  pub fn par_chunks_mut(&mut self) -> HashMapIterMutPar<ChunkPos, ChunkSparse<T, S>>
   where T: Send {
     self.chunks.par_iter_mut()
   }
 
-  pub fn entry(&mut self, pos: [isize; 2]) -> ExGridSparseEntry<T, S> {
+  pub fn entry(&mut self, pos: GlobalPos) -> ExGridSparseEntry<T, S> {
     let (chunk, local) = decompose::<S>(pos);
     ExGridSparseEntry {
       entry: self.chunks.entry(chunk),
@@ -216,8 +217,8 @@ impl<T, H, const S: usize> IntoIterator for ExGridSparse<T, S, H> {
 
 #[derive(Debug)]
 pub struct ExGridSparseEntry<'a, T, const S: usize> {
-  entry: Entry<'a, [i32; 2], ChunkSparse<T, S>>,
-  pos: [usize; 2]
+  entry: Entry<'a, ChunkPos, ChunkSparse<T, S>>,
+  pos: LocalPos
 }
 
 impl<'a, T, const S: usize> ExGridSparseEntry<'a, T, S> {
@@ -229,7 +230,7 @@ impl<'a, T, const S: usize> ExGridSparseEntry<'a, T, S> {
     &mut self.entry.or_insert_with(default)[self.pos]
   }
 
-  pub fn or_insert_with_key<F: FnOnce([i32; 2]) -> ChunkSparse<T, S>>(self, default: F) -> &'a mut Option<T> {
+  pub fn or_insert_with_key<F: FnOnce(ChunkPos) -> ChunkSparse<T, S>>(self, default: F) -> &'a mut Option<T> {
     &mut self.entry.or_insert_with_key(move |&k| default(k))[self.pos]
   }
 }
@@ -238,7 +239,7 @@ impl<'a, T, const S: usize> ExGridSparseEntry<'a, T, S> {
 
 #[derive(Debug, Clone)]
 pub struct ExGrid<T, const S: usize, H = RandomState> {
-  chunks: HashMap<[i32; 2], Chunk<T, S>, H>
+  chunks: HashMap<ChunkPos, Chunk<T, S>, H>
 }
 
 impl<T, H, const S: usize> ExGrid<T, S, H> {
@@ -252,17 +253,17 @@ impl<T, H, const S: usize> ExGrid<T, S, H> {
   }
 
   /// Returns two points `(min, max)` that bound a box containing the all chunks in this grid.
-  pub fn chunks_bounds(&self) -> Option<([i32; 2], [i32; 2])> {
+  pub fn chunks_bounds(&self) -> Option<(ChunkPos, ChunkPos)> {
     chunks_bounds(&self.chunks)
   }
 
   /// Returns two points `(min, max)` that bound a box containing all possible cells of this grid.
-  pub fn bounds(&self) -> Option<([isize; 2], [isize; 2])> {
+  pub fn bounds(&self) -> Option<(GlobalPos, GlobalPos)> {
     self.chunks_bounds().map(map_total_bounds::<S>)
   }
 
   pub fn retain<F>(&mut self, f: F)
-  where F: FnMut(&[i32; 2], &mut Chunk<T, S>) -> bool {
+  where F: FnMut(&ChunkPos, &mut Chunk<T, S>) -> bool {
     self.chunks.retain(f);
   }
 
@@ -292,12 +293,12 @@ impl<T, H, const S: usize> ExGrid<T, S, H> {
   }
 
   #[inline]
-  pub fn chunks(&self) -> HashMapIter<[i32; 2], Chunk<T, S>> {
+  pub fn chunks(&self) -> HashMapIter<ChunkPos, Chunk<T, S>> {
     self.chunks.iter()
   }
 
   #[inline]
-  pub fn chunks_mut(&mut self) -> HashMapIterMut<[i32; 2], Chunk<T, S>> {
+  pub fn chunks_mut(&mut self) -> HashMapIterMut<ChunkPos, Chunk<T, S>> {
     self.chunks.iter_mut()
   }
 
@@ -308,19 +309,19 @@ impl<T, H, const S: usize> ExGrid<T, S, H> {
 
 impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
   /// Gets a reference to the value of a cell if the chunk it is located in exists.
-  pub fn get(&self, pos: [isize; 2]) -> Option<&T> {
+  pub fn get(&self, pos: GlobalPos) -> Option<&T> {
     let (chunk, local) = decompose::<S>(pos);
     self.chunks.get(&chunk).map(|c| &c[local])
   }
 
   /// Gets a mutable reference to the value of a cell if the chunk it is located in exists.
-  pub fn get_mut(&mut self, pos: [isize; 2]) -> Option<&mut T> {
+  pub fn get_mut(&mut self, pos: GlobalPos) -> Option<&mut T> {
     let (chunk, local) = decompose::<S>(pos);
     self.chunks.get_mut(&chunk).map(|c| &mut c[local])
   }
 
   /// Gets a mutable reference to the value of a cell, creating a chunk if necessary.
-  pub fn get_mut_default(&mut self, pos: [isize; 2]) -> &mut T
+  pub fn get_mut_default(&mut self, pos: GlobalPos) -> &mut T
   where T: Default {
     let (chunk, local) = decompose::<S>(pos);
     &mut self.get_chunk_default(chunk)[local]
@@ -328,43 +329,43 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
 
   /// Sets the value of a given cell, creating a chunk if necessary,
   /// returning the previously contained value.
-  pub fn insert_default(&mut self, pos: [isize; 2], value: T) -> T
+  pub fn insert_default(&mut self, pos: GlobalPos, value: T) -> T
   where T: Default {
     replace(self.get_mut_default(pos), value)
   }
 
-  pub fn get_chunk(&self, pos: [i32; 2]) -> Option<&Chunk<T, S>> {
+  pub fn get_chunk(&self, pos: ChunkPos) -> Option<&Chunk<T, S>> {
     self.chunks.get(&pos)
   }
 
-  pub fn get_chunk_mut(&mut self, pos: [i32; 2]) -> Option<&mut Chunk<T, S>> {
+  pub fn get_chunk_mut(&mut self, pos: ChunkPos) -> Option<&mut Chunk<T, S>> {
     self.chunks.get_mut(&pos)
   }
 
-  pub fn get_chunk_default(&mut self, pos: [i32; 2]) -> &mut Chunk<T, S>
+  pub fn get_chunk_default(&mut self, pos: ChunkPos) -> &mut Chunk<T, S>
   where T: Default {
     self.get_chunk_entry(pos).or_default()
   }
 
-  pub fn get_chunk_entry(&mut self, pos: [i32; 2]) -> Entry<[i32; 2], Chunk<T, S>> {
+  pub fn get_chunk_entry(&mut self, pos: ChunkPos) -> Entry<ChunkPos, Chunk<T, S>> {
     self.chunks.entry(pos)
   }
 
   #[cfg(feature = "multi-thread")]
   #[inline]
-  pub fn par_chunks(&self) -> HashMapIterPar<[i32; 2], Chunk<T, S>>
+  pub fn par_chunks(&self) -> HashMapIterPar<ChunkPos, Chunk<T, S>>
   where T: Sync {
     self.chunks.par_iter()
   }
 
   #[cfg(feature = "multi-thread")]
   #[inline]
-  pub fn par_chunks_mut(&mut self) -> HashMapIterMutPar<[i32; 2], Chunk<T, S>>
+  pub fn par_chunks_mut(&mut self) -> HashMapIterMutPar<ChunkPos, Chunk<T, S>>
   where T: Send {
     self.chunks.par_iter_mut()
   }
 
-  pub fn entry(&mut self, pos: [isize; 2]) -> ExGridEntry<T, S> {
+  pub fn entry(&mut self, pos: GlobalPos) -> ExGridEntry<T, S> {
     let (chunk, local) = decompose::<S>(pos);
     ExGridEntry {
       entry: self.chunks.entry(chunk),
@@ -412,8 +413,8 @@ impl<T, H, const S: usize> IntoIterator for ExGrid<T, S, H> {
 
 #[derive(Debug)]
 pub struct ExGridEntry<'a, T, const S: usize> {
-  entry: Entry<'a, [i32; 2], Chunk<T, S>>,
-  pos: [usize; 2]
+  entry: Entry<'a, ChunkPos, Chunk<T, S>>,
+  pos: LocalPos
 }
 
 impl<'a, T, const S: usize> ExGridEntry<'a, T, S> {
@@ -425,51 +426,41 @@ impl<'a, T, const S: usize> ExGridEntry<'a, T, S> {
     &mut self.entry.or_insert_with(default)[self.pos]
   }
 
-  pub fn or_insert_with_key<F: FnOnce([i32; 2]) -> Chunk<T, S>>(self, default: F) -> &'a mut T {
+  pub fn or_insert_with_key<F: FnOnce(ChunkPos) -> Chunk<T, S>>(self, default: F) -> &'a mut T {
     &mut self.entry.or_insert_with_key(move |&k| default(k))[self.pos]
   }
 }
 
 
 
-type FilterSparseCells<T, const S: usize> = for<'r> fn((&'r [i32; 2], &'r ChunkSparse<T, S>)) -> Compose<ChunkSparseCells<'r, T, S>, S>;
-type FilterSparseCellsMut<T, const S: usize> = for<'r> fn((&'r [i32; 2], &'r mut ChunkSparse<T, S>)) -> Compose<ChunkSparseCellsMut<'r, T, S>, S>;
-type FilterSparseIntoCells<T, const S: usize> = fn(([i32; 2], ChunkSparse<T, S>)) -> Compose<ChunkSparseIntoCells<T, S>, S>;
-type FilterCells<T, const S: usize> = for<'r> fn((&'r [i32; 2], &'r Chunk<T, S>)) -> Compose<ChunkCells<'r, T, S>, S>;
-type FilterCellsMut<T, const S: usize> = for<'r> fn((&'r [i32; 2], &'r mut Chunk<T, S>)) -> Compose<ChunkCellsMut<'r, T, S>, S>;
-type FilterIntoCells<T, const S: usize> = fn(([i32; 2], Chunk<T, S>)) -> Compose<ChunkIntoCells<T, S>, S>;
+type FilterSparseCells<T, const S: usize> = for<'r> fn((&'r ChunkPos, &'r ChunkSparse<T, S>)) -> Compose<ChunkSparseCells<'r, T, S>, S>;
+type FilterSparseCellsMut<T, const S: usize> = for<'r> fn((&'r ChunkPos, &'r mut ChunkSparse<T, S>)) -> Compose<ChunkSparseCellsMut<'r, T, S>, S>;
+type FilterSparseIntoCells<T, const S: usize> = fn((ChunkPos, ChunkSparse<T, S>)) -> Compose<ChunkSparseIntoCells<T, S>, S>;
+type FilterCells<T, const S: usize> = for<'r> fn((&'r ChunkPos, &'r Chunk<T, S>)) -> Compose<ChunkCells<'r, T, S>, S>;
+type FilterCellsMut<T, const S: usize> = for<'r> fn((&'r ChunkPos, &'r mut Chunk<T, S>)) -> Compose<ChunkCellsMut<'r, T, S>, S>;
+type FilterIntoCells<T, const S: usize> = fn((ChunkPos, Chunk<T, S>)) -> Compose<ChunkIntoCells<T, S>, S>;
 
 /// Converts global coordinates to coordinates for a single chunk
 /// and coordinates to a cell in that chunk.
-pub fn decompose<const S: usize>(pos: [isize; 2]) -> ([i32; 2], [usize; 2]) {
+pub fn decompose<const S: usize>(pos: GlobalPos) -> (ChunkPos, LocalPos) {
   assert!(S > 0, "cannot index into a grid or chunk of size 0");
-  let chunk = pos.map(|p| p.div_euclid(S as isize) as i32);
-  let local = pos.map(|p| p.rem_euclid(S as isize) as usize);
+  let chunk = pos.map(|p| p.div_euclid(S as i64) as i32);
+  let local = pos.map(|p| p.rem_euclid(S as i64) as usize);
   (chunk, local)
 }
 
-pub fn compose<const S: usize>(chunk: [i32; 2], local: [usize; 2]) -> [isize; 2] {
+pub fn compose<const S: usize>(chunk: ChunkPos, local: LocalPos) -> GlobalPos {
   assert!(S > 0, "cannot index into a grid or chunk of size 0");
-  let x = chunk[0] as isize * S as isize + local[0] as isize;
-  let y = chunk[1] as isize * S as isize + local[1] as isize;
-  [x, y]
+  chunk.as_::<i64>() * S as i64 + local.as_::<i64>()
 }
 
-fn chunks_bounds<C, H>(chunks: &HashMap<[i32; 2], C, H>) -> Option<([i32; 2], [i32; 2])> {
+fn chunks_bounds<C, H>(chunks: &HashMap<ChunkPos, C, H>) -> Option<(ChunkPos, ChunkPos)> {
   chunks.keys().fold(None, |state, &chunk| match state {
-    Some((min, max)) => Some((min_pos(min, chunk), max_pos(max, chunk))),
+    Some((min, max)) => Some((ChunkPos::min(min, chunk), ChunkPos::max(max, chunk))),
     None => Some((chunk, chunk))
   })
 }
 
-fn map_total_bounds<const S: usize>((min, max): ([i32; 2], [i32; 2])) -> ([isize; 2], [isize; 2]) {
-  (compose::<S>(min, [0, 0]), compose::<S>(max, [S - 1, S - 1]))
-}
-
-fn min_pos<T: Ord + Copy>(a: [T; 2], b: [T; 2]) -> [T; 2] {
-  [std::cmp::min(a[0], b[0]), std::cmp::min(a[1], b[1])]
-}
-
-fn max_pos<T: Ord + Copy>(a: [T; 2], b: [T; 2]) -> [T; 2] {
-  [std::cmp::max(a[0], b[0]), std::cmp::max(a[1], b[1])]
+fn map_total_bounds<const S: usize>((min, max): (ChunkPos, ChunkPos)) -> (GlobalPos, GlobalPos) {
+  (compose::<S>(min, LocalPos::zero()), compose::<S>(max, LocalPos::broadcast(S - 1)))
 }

@@ -5,6 +5,7 @@ mod iter_par;
 pub use self::iter::*;
 #[cfg(feature = "multi-thread")]
 pub use self::iter_par::*;
+use crate::LocalPos;
 
 #[cfg(feature = "multi-thread")]
 use rayon::iter::{
@@ -89,18 +90,18 @@ impl<T, const S: usize> ChunkSparse<T, S> {
   const NEW_INTO_CELLS: FilterIntoCells<T, S> = |(i, v)| v.map(|v| (i, v));
 }
 
-impl<T, const S: usize> Index<[usize; 2]> for ChunkSparse<T, S> {
+impl<T, const S: usize> Index<LocalPos> for ChunkSparse<T, S> {
   type Output = Option<T>;
 
   #[inline]
-  fn index(&self, pos: [usize; 2]) -> &Option<T> {
+  fn index(&self, pos: LocalPos) -> &Option<T> {
     &self.inner[pos]
   }
 }
 
-impl<T, const S: usize> IndexMut<[usize; 2]> for ChunkSparse<T, S> {
+impl<T, const S: usize> IndexMut<LocalPos> for ChunkSparse<T, S> {
   #[inline]
-  fn index_mut(&mut self, pos: [usize; 2]) -> &mut Option<T> {
+  fn index_mut(&mut self, pos: LocalPos) -> &mut Option<T> {
     &mut self.inner[pos]
   }
 }
@@ -175,9 +176,9 @@ impl<T: Send, const S: usize> IntoParallelIterator for ChunkSparse<T, S> {
   }
 }
 
-type FilterCells<T, const S: usize> = for<'a> fn(([usize; 2], &'a Option<T>)) -> Option<([usize; 2], &'a T)>;
-type FilterCellsMut<T, const S: usize> = for<'a> fn(([usize; 2], &'a mut Option<T>)) -> Option<([usize; 2], &'a mut T)>;
-type FilterIntoCells<T, const S: usize> = fn(([usize; 2], Option<T>)) -> Option<([usize; 2], T)>;
+type FilterCells<T, const S: usize> = for<'a> fn((LocalPos, &'a Option<T>)) -> Option<(LocalPos, &'a T)>;
+type FilterCellsMut<T, const S: usize> = for<'a> fn((LocalPos, &'a mut Option<T>)) -> Option<(LocalPos, &'a mut T)>;
+type FilterIntoCells<T, const S: usize> = fn((LocalPos, Option<T>)) -> Option<(LocalPos, T)>;
 
 macro_rules! assert_bounds {
   (horizontal, $y:expr, $S:expr) => (assert!($y < $S, "index out of bounds: the size is {} but the y-index is {}", $S, $y));
@@ -257,19 +258,19 @@ impl<T, const S: usize> Chunk<T, S> {
   }
 }
 
-impl<T, const S: usize> Index<[usize; 2]> for Chunk<T, S> {
+impl<T, const S: usize> Index<LocalPos> for Chunk<T, S> {
   type Output = T;
 
   #[inline]
-  fn index(&self, [x, y]: [usize; 2]) -> &T {
-    &self.inner[y][x]
+  fn index(&self, pos: LocalPos) -> &T {
+    &self.inner[pos.y][pos.x]
   }
 }
 
-impl<T, const S: usize> IndexMut<[usize; 2]> for Chunk<T, S> {
+impl<T, const S: usize> IndexMut<LocalPos> for Chunk<T, S> {
   #[inline]
-  fn index_mut(&mut self, [x, y]: [usize; 2]) -> &mut T {
-    &mut self.inner[y][x]
+  fn index_mut(&mut self, pos: LocalPos) -> &mut T {
+    &mut self.inner[pos.y][pos.x]
   }
 }
 

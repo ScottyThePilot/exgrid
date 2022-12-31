@@ -1,6 +1,8 @@
 extern crate exgrid;
 
+use exgrid::GlobalPos;
 use exgrid::grid::*;
+use vek::Vec2;
 
 use rand::Rng;
 
@@ -76,12 +78,12 @@ fn test_grid_sparse_basics_g<const S: usize>() {
   };
 }
 
-fn random_position(rng: &mut impl Rng) -> [isize; 2] {
-  let r = (i32::MIN as isize)..=(i32::MAX as isize);
-  [rng.gen_range(r.clone()), rng.gen_range(r)]
+fn random_position(rng: &mut impl Rng) -> GlobalPos {
+  let r = (i32::MIN as i64)..=(i32::MAX as i64);
+  Vec2::new(rng.gen_range(r.clone()), rng.gen_range(r))
 }
 
-fn random_positions() -> impl Iterator<Item = [isize; 2]> {
+fn random_positions() -> impl Iterator<Item = GlobalPos> {
   let mut rng = rand::thread_rng();
   let count = rng.gen_range(16..32);
   std::iter::repeat_with(move || {
@@ -89,7 +91,7 @@ fn random_positions() -> impl Iterator<Item = [isize; 2]> {
   }).take(count)
 }
 
-fn random_elements() -> impl Iterator<Item = ([isize; 2], u32)> {
+fn random_elements() -> impl Iterator<Item = (GlobalPos, u32)> {
   let mut rng = rand::thread_rng();
   let count = rng.gen_range(16..32);
   std::iter::repeat_with(move || {
