@@ -14,6 +14,7 @@ use rayon::iter::{
   IntoParallelRefIterator,
   IntoParallelRefMutIterator
 };
+use vek::{Lerp, Vec2};
 
 use std::collections::hash_map::{
   Entry, HashMap, RandomState,
@@ -116,43 +117,65 @@ impl<T, H, const S: usize> ExGridSparse<T, S, H> {
 
 impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
   /// Gets a reference to the value of a cell if it or the chunk it is located in exists.
-  pub fn get(&self, pos: GlobalPos) -> Option<&T> {
-    let (chunk, local) = decompose::<S>(pos);
+  pub fn get(&self, pos: impl Into<GlobalPos>) -> Option<&T> {
+    let (chunk, local) = decompose::<S>(pos.into());
     self.get_chunk(chunk)?[local].as_ref()
   }
 
   /// Gets a mutable reference to the value of a cell if it or the chunk it is located in exists.
-  pub fn get_mut(&mut self, pos: GlobalPos) -> Option<&mut T> {
-    let (chunk, local) = decompose::<S>(pos);
+  pub fn get_mut(&mut self, pos: impl Into<GlobalPos>) -> Option<&mut T> {
+    let (chunk, local) = decompose::<S>(pos.into());
     self.get_chunk_mut(chunk)?[local].as_mut()
   }
 
   /// Gets a mutable reference to a cell, creating a chunk if necessary.
-  pub fn get_mut_default(&mut self, pos: GlobalPos) -> &mut Option<T> {
-    let (chunk, local) = decompose::<S>(pos);
+  pub fn get_mut_default(&mut self, pos: impl Into<GlobalPos>) -> &mut Option<T> {
+    let (chunk, local) = decompose::<S>(pos.into());
     &mut self.get_chunk_default(chunk)[local]
+  }
+
+  pub fn get_or_insert_default(&mut self, pos: impl Into<GlobalPos>) -> &mut T where T: Default {
+    self.get_mut_default(pos).get_or_insert_with(T::default)
+  }
+
+  /// Samples a value from the grid, linearly interpolating the result value.
+  /// Will return `None` if any of the relevant nearby cells are empty.
+  pub fn try_sample(&self, pos: impl Into<Vec2<f32>>) -> Option<T>
+  where T: Lerp<Output = T> + Clone {
+    crate::chunk::try_sample_2d(pos.into(), |pos: Vec2<i64>| {
+      self.get(pos).cloned()
+    })
+  }
+
+  /// Samples a value from the grid, linearly interpolating the result value.
+  /// Uses `T`'s `Default` value whenever a relevant cell is empty.
+  pub fn sample_or_default(&self, pos: impl Into<Vec2<f32>>) -> T
+  where T: Lerp<Output = T> + Default + Clone {
+    crate::chunk::sample_2d(pos.into(), |pos: Vec2<i64>| {
+      self.get(pos).cloned().unwrap_or_default()
+    })
   }
 
   /// Sets the value of a given cell, creating a chunk if necessary,
   /// returning any contained value if present.
-  pub fn insert(&mut self, pos: GlobalPos, value: T) -> Option<T> {
+  pub fn insert(&mut self, pos: impl Into<GlobalPos>, value: T) -> Option<T> {
     replace(self.get_mut_default(pos), Some(value))
   }
 
-  pub fn get_chunk(&self, pos: ChunkPos) -> Option<&ChunkSparse<T, S>> {
-    self.chunks.get(&pos)
+  pub fn get_chunk(&self, pos: impl Into<ChunkPos>) -> Option<&ChunkSparse<T, S>> {
+    self.chunks.get(&pos.into())
   }
 
-  pub fn get_chunk_mut(&mut self, pos: ChunkPos) -> Option<&mut ChunkSparse<T, S>> {
-    self.chunks.get_mut(&pos)
+  pub fn get_chunk_mut(&mut self, pos: impl Into<ChunkPos>) -> Option<&mut ChunkSparse<T, S>> {
+    self.chunks.get_mut(&pos.into())
   }
 
-  pub fn get_chunk_default(&mut self, pos: ChunkPos) -> &mut ChunkSparse<T, S> {
+  pub fn get_chunk_default(&mut self, pos: impl Into<ChunkPos>) -> &mut ChunkSparse<T, S> {
     self.get_chunk_entry(pos).or_default()
   }
 
-  pub fn get_chunk_entry(&mut self, pos: ChunkPos) -> Entry<ChunkPos, ChunkSparse<T, S>> {
-    self.chunks.entry(pos)
+  pub fn get_chunk_entry(&mut self, pos: impl Into<ChunkPos>) -> Entry<ChunkPos, ChunkSparse<T, S>> {
+    self.chunks.entry(pos.into())
   }
 
   #[cfg(feature = "multi-thread")]
@@ -169,8 +192,8 @@ impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
     self.chunks.par_iter_mut()
   }
 
-  pub fn entry(&mut self, pos: GlobalPos) -> ExGridSparseEntry<T, S> {
-    let (chunk, local) = decompose::<S>(pos);
+  pub fn entry(&mut self, pos: impl Into<GlobalPos>) -> ExGridSparseEntry<T, S> {
+    let (chunk, local) = decompose::<S>(pos.into());
     ExGridSparseEntry {
       entry: self.chunks.entry(chunk),
       pos: local
@@ -309,46 +332,74 @@ impl<T, H, const S: usize> ExGrid<T, S, H> {
 
 impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
   /// Gets a reference to the value of a cell if the chunk it is located in exists.
-  pub fn get(&self, pos: GlobalPos) -> Option<&T> {
-    let (chunk, local) = decompose::<S>(pos);
+  pub fn get(&self, pos: impl Into<GlobalPos>) -> Option<&T> {
+    let (chunk, local) = decompose::<S>(pos.into());
     self.chunks.get(&chunk).map(|c| &c[local])
   }
 
   /// Gets a mutable reference to the value of a cell if the chunk it is located in exists.
-  pub fn get_mut(&mut self, pos: GlobalPos) -> Option<&mut T> {
-    let (chunk, local) = decompose::<S>(pos);
+  pub fn get_mut(&mut self, pos: impl Into<GlobalPos>) -> Option<&mut T> {
+    let (chunk, local) = decompose::<S>(pos.into());
     self.chunks.get_mut(&chunk).map(|c| &mut c[local])
   }
 
   /// Gets a mutable reference to the value of a cell, creating a chunk if necessary.
-  pub fn get_mut_default(&mut self, pos: GlobalPos) -> &mut T
+  pub fn get_mut_default(&mut self, pos: impl Into<GlobalPos>) -> &mut T
   where T: Default {
-    let (chunk, local) = decompose::<S>(pos);
+    let (chunk, local) = decompose::<S>(pos.into());
     &mut self.get_chunk_default(chunk)[local]
+  }
+
+  /// Samples a value from the grid, linearly interpolating the result value.
+  /// Will return `None` if any of the relevant nearby cells are empty.
+  pub fn try_sample(&self, pos: impl Into<Vec2<f32>>) -> Option<T>
+  where T: Lerp<Output = T> + Clone {
+    crate::chunk::try_sample_2d(pos.into(), |pos: Vec2<i64>| {
+      self.get(pos).cloned()
+    })
+  }
+
+  /// Samples a value from the grid, linearly interpolating the result value.
+  /// Uses `T`'s `Default` value whenever a relevant cell is empty.
+  pub fn sample_or_default(&self, pos: impl Into<Vec2<f32>>) -> T
+  where T: Lerp<Output = T> + Default + Clone {
+    crate::chunk::sample_2d(pos.into(), |pos: Vec2<i64>| {
+      self.get(pos).cloned().unwrap_or_default()
+    })
+  }
+
+  /// Samples a value from the grid, linearly interpolating the result value.
+  /// Uses `T`'s `Default` value whenever a relevant cell is empty,
+  /// inserting that value into the empty cell.
+  pub fn sample_insert_default(&mut self, pos: impl Into<Vec2<f32>>) -> T
+  where T: Lerp<Output = T> + Default + Clone {
+    crate::chunk::sample_2d(pos.into(), |pos: Vec2<i64>| {
+      self.get_mut_default(pos).clone()
+    })
   }
 
   /// Sets the value of a given cell, creating a chunk if necessary,
   /// returning the previously contained value.
-  pub fn insert_default(&mut self, pos: GlobalPos, value: T) -> T
+  pub fn insert_default(&mut self, pos: impl Into<GlobalPos>, value: T) -> T
   where T: Default {
     replace(self.get_mut_default(pos), value)
   }
 
-  pub fn get_chunk(&self, pos: ChunkPos) -> Option<&Chunk<T, S>> {
-    self.chunks.get(&pos)
+  pub fn get_chunk(&self, pos: impl Into<ChunkPos>) -> Option<&Chunk<T, S>> {
+    self.chunks.get(&pos.into())
   }
 
-  pub fn get_chunk_mut(&mut self, pos: ChunkPos) -> Option<&mut Chunk<T, S>> {
-    self.chunks.get_mut(&pos)
+  pub fn get_chunk_mut(&mut self, pos: impl Into<ChunkPos>) -> Option<&mut Chunk<T, S>> {
+    self.chunks.get_mut(&pos.into())
   }
 
-  pub fn get_chunk_default(&mut self, pos: ChunkPos) -> &mut Chunk<T, S>
+  pub fn get_chunk_default(&mut self, pos: impl Into<ChunkPos>) -> &mut Chunk<T, S>
   where T: Default {
     self.get_chunk_entry(pos).or_default()
   }
 
-  pub fn get_chunk_entry(&mut self, pos: ChunkPos) -> Entry<ChunkPos, Chunk<T, S>> {
-    self.chunks.entry(pos)
+  pub fn get_chunk_entry(&mut self, pos: impl Into<ChunkPos>) -> Entry<ChunkPos, Chunk<T, S>> {
+    self.chunks.entry(pos.into())
   }
 
   #[cfg(feature = "multi-thread")]
@@ -365,8 +416,8 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
     self.chunks.par_iter_mut()
   }
 
-  pub fn entry(&mut self, pos: GlobalPos) -> ExGridEntry<T, S> {
-    let (chunk, local) = decompose::<S>(pos);
+  pub fn entry(&mut self, pos: impl Into<GlobalPos>) -> ExGridEntry<T, S> {
+    let (chunk, local) = decompose::<S>(pos.into());
     ExGridEntry {
       entry: self.chunks.entry(chunk),
       pos: local
