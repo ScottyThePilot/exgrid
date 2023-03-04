@@ -1,4 +1,3 @@
-extern crate array_init;
 #[cfg(feature = "multi-thread")]
 pub extern crate rayon;
 pub extern crate vek;

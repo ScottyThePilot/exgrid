@@ -31,8 +31,31 @@ impl<T, const S: usize> ChunkSparse<T, S> {
     Self::default()
   }
 
-  pub fn init<F: FnMut() -> Option<T>>(f: F) -> Self {
+  pub fn init<F: FnMut(Vec2<usize>) -> Option<T>>(f: F) -> Self {
     ChunkSparse { inner: Chunk::init(f) }
+  }
+
+  pub fn map_dense<U, F>(self, f: F) -> Chunk<U, S>
+  where F: FnMut(Option<T>) -> U {
+    self.inner.map(f)
+  }
+
+  pub fn map_sparse<U, F>(self, mut f: F) -> ChunkSparse<U, S>
+  where F: FnMut(T) -> U {
+    self.map(|cell| cell.map(&mut f))
+  }
+
+  pub fn map<U, F>(self, f: F) -> ChunkSparse<U, S>
+  where F: FnMut(Option<T>) -> Option<U> {
+    ChunkSparse { inner: self.inner.map(f) }
+  }
+
+  pub fn as_chunk(&self) -> &Chunk<Option<T>, S> {
+    &self.inner
+  }
+
+  pub fn as_chunk_mut(&mut self) -> &mut Chunk<Option<T>, S> {
+    &mut self.inner
   }
 
   #[inline]
@@ -47,6 +70,10 @@ impl<T, const S: usize> ChunkSparse<T, S> {
     try_sample_2d(pos, |pos: Vec2<usize>| {
       self[pos].as_ref().cloned()
     })
+  }
+
+  pub fn to_vec(&self) -> Vec<Option<T>> where T: Clone {
+    self.inner.to_vec()
   }
 
   #[doc(hidden)]
@@ -122,10 +149,56 @@ impl<T, const S: usize> IndexMut<LocalPos> for ChunkSparse<T, S> {
   }
 }
 
+impl<T, const S: usize> IndexMut<[usize; 2]> for ChunkSparse<T, S> {
+  #[inline]
+  fn index_mut(&mut self, pos: [usize; 2]) -> &mut Option<T> {
+    &mut self.inner[pos]
+  }
+}
+
+impl<T, const S: usize> Index<[usize; 2]> for ChunkSparse<T, S> {
+  type Output = Option<T>;
+
+  #[inline]
+  fn index(&self, pos: [usize; 2]) -> &Option<T> {
+    &self.inner[pos]
+  }
+}
+
 impl<T, const S: usize> Default for ChunkSparse<T, S> {
   #[inline]
   fn default() -> Self {
     ChunkSparse { inner: Chunk::default() }
+  }
+}
+
+impl<T, const S: usize> From<[[Option<T>; S]; S]> for ChunkSparse<T, S> {
+  fn from(inner: [[Option<T>; S]; S]) -> Self {
+    ChunkSparse { inner: Chunk { inner } }
+  }
+}
+
+impl<T, const S: usize> From<ChunkSparse<T, S>> for [[Option<T>; S]; S] {
+  fn from(chunk: ChunkSparse<T, S>) -> Self {
+    chunk.inner.inner
+  }
+}
+
+impl<T, const S: usize> From<ChunkSparse<T, S>> for Box<[Option<T>]> {
+  fn from(chunk: ChunkSparse<T, S>) -> Self {
+    cast_nested_array(chunk.inner.inner)
+  }
+}
+
+impl<T, const S: usize> From<Chunk<Option<T>, S>> for ChunkSparse<T, S> {
+  fn from(inner: Chunk<Option<T>, S>) -> Self {
+    ChunkSparse { inner }
+  }
+}
+
+impl<T, const S: usize> From<ChunkSparse<T, S>> for Chunk<Option<T>, S> {
+  fn from(chunk: ChunkSparse<T, S>) -> Self {
+    chunk.inner
   }
 }
 
@@ -209,8 +282,13 @@ impl<T, const S: usize> Chunk<T, S> {
     Self::default()
   }
 
-  pub fn init<F: FnMut() -> T>(f: F) -> Self {
+  pub fn init<F: FnMut(Vec2<usize>) -> T>(f: F) -> Self {
     Chunk { inner: new_inner(f) }
+  }
+
+  pub fn map<F, U>(self, mut f: F) -> Chunk<U, S>
+  where F: FnMut(T) -> U {
+    Chunk { inner: self.inner.map(|slice| slice.map(&mut f)) }
   }
 
   #[inline]
@@ -225,6 +303,10 @@ impl<T, const S: usize> Chunk<T, S> {
     sample_2d(pos, |pos: Vec2<usize>| {
       self[pos].clone()
     })
+  }
+
+  pub fn to_vec(&self) -> Vec<T> where T: Clone {
+    Vec::from(cast_nested_array(self.inner.clone()))
   }
 
   pub fn horizontal_slice(&self, y: usize) -> [T; S] where T: Clone {
@@ -244,12 +326,12 @@ impl<T, const S: usize> Chunk<T, S> {
 
   pub fn vertical_slice(&self, x: usize) -> [T; S] where T: Clone {
     Self::assert_bounds_vertical(x);
-    array_init::array_init(|y| self.inner[y][x].clone())
+    std::array::from_fn(|y| self.inner[y][x].clone())
   }
 
   pub fn vertical_slice_each_ref(&self, x: usize) -> [&T; S] {
     Self::assert_bounds_vertical(x);
-    array_init::array_init(|y| &self.inner[y][x])
+    std::array::from_fn(|y| &self.inner[y][x])
   }
 
   pub(crate) fn vertical_slice_iter(&self, x: usize) -> impl Iterator<Item = &T> {
@@ -319,10 +401,44 @@ impl<T, const S: usize> IndexMut<LocalPos> for Chunk<T, S> {
   }
 }
 
+impl<T, const S: usize> Index<[usize; 2]> for Chunk<T, S> {
+  type Output = T;
+
+  #[inline]
+  fn index(&self, pos: [usize; 2]) -> &T {
+    &self[LocalPos::from(pos)]
+  }
+}
+
+impl<T, const S: usize> IndexMut<[usize; 2]> for Chunk<T, S> {
+  #[inline]
+  fn index_mut(&mut self, pos: [usize; 2]) -> &mut T {
+    &mut self[LocalPos::from(pos)]
+  }
+}
+
 impl<T: Default, const S: usize> Default for Chunk<T, S> {
   #[inline]
   fn default() -> Self {
-    Chunk { inner: new_inner(T::default) }
+    Chunk { inner: new_inner(|_| T::default()) }
+  }
+}
+
+impl<T, const S: usize> From<[[T; S]; S]> for Chunk<T, S> {
+  fn from(inner: [[T; S]; S]) -> Self {
+    Chunk { inner }
+  }
+}
+
+impl<T, const S: usize> From<Chunk<T, S>> for [[T; S]; S] {
+  fn from(chunk: Chunk<T, S>) -> Self {
+    chunk.inner
+  }
+}
+
+impl<T, const S: usize> From<Chunk<T, S>> for Box<[T]> {
+  fn from(chunk: Chunk<T, S>) -> Self {
+    cast_nested_array(chunk.inner)
   }
 }
 
@@ -390,10 +506,10 @@ impl<T: Send, const S: usize> IntoParallelIterator for Chunk<T, S> {
 }
 
 // This is necessary due to the array primitive's `Default` impl not actually being generic across all `N`.
-fn new_inner<T, F: FnMut() -> T, const N: usize>(mut f: F) -> [[T; N]; N] {
-  array_init::array_init(|_| {
-    array_init::array_init(|_| {
-      f()
+fn new_inner<T, F: FnMut(Vec2<usize>) -> T, const N: usize>(mut f: F) -> [[T; N]; N] {
+  std::array::from_fn(|y| {
+    std::array::from_fn(|x| {
+      f(Vec2 { x, y })
     })
   })
 }

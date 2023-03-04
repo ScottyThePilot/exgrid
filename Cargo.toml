@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-array-init = "2.0.1"
 rayon = { version = "1.5.3", optional = true }
 vek = { version = "0.15.9", features = ["std"], default-features = false }
 
