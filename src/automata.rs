@@ -13,10 +13,10 @@ pub trait AutomataRules<const S: usize> {
 
   /// Rule that determines when new neighboring chunks should be created in order to
   /// prevent the automata from becoming trapped in a limited number of chunks.
-  fn expansion(&self, chunk: &Chunk<Self::Cell, S>) -> Expansion8;
+  fn expansion(&mut self, chunk: &Chunk<Self::Cell, S>) -> Expansion8;
 
   /// Rule that determines the value of a given cell based on the current state of the automata.
-  fn simulate<H>(&self, pos: GlobalPos, grid: &ExGrid<Self::Cell, S, H>) -> Self::Cell;
+  fn simulate<H>(&mut self, pos: GlobalPos, grid: &ExGrid<Self::Cell, S, H>) -> Self::Cell;
 
   /// Rule that determines whether or not a cell is "empty".
   /// A chunk containing empty cells will be erased by [`Automata::clean_up`] if all of its cells pass this check.
@@ -28,17 +28,17 @@ pub trait AutomataRules<const S: usize> {
 }
 
 pub struct Automata<A: AutomataRules<S>, const S: usize, H = RandomState> {
-  automata_rules: A,
-  state: ExGrid<A::Cell, S, H>
+  pub state: ExGrid<A::Cell, S, H>,
+  pub rules: A
 }
 
 impl<A: AutomataRules<S>, H: BuildHasher, const S: usize> Automata<A, S, H> {
-  pub fn new(automata_rules: A) -> Self where H: Default {
-    Self::with_state(automata_rules, ExGrid::new())
+  pub fn new(rules: A) -> Self where H: Default {
+    Self::with_state(rules, ExGrid::new())
   }
 
-  pub fn with_state(automata_rules: A, state: ExGrid<A::Cell, S, H>) -> Self {
-    Automata { automata_rules, state }
+  pub fn with_state(rules: A, state: ExGrid<A::Cell, S, H>) -> Self {
+    Automata { rules, state }
   }
 
   /// Advances the cellular automata forward by one step.
@@ -55,12 +55,12 @@ impl<A: AutomataRules<S>, H: BuildHasher, const S: usize> Automata<A, S, H> {
   where A::Cell: Default {
     scratch.clear();
     for (&pos, chunk) in self.state.chunks() {
-      self.automata_rules.expansion(chunk).apply_with_center(pos, |pos| {
+      self.rules.expansion(chunk).apply_with_center(pos, |pos| {
         if let Entry::Vacant(entry) = scratch.get_chunk_entry(pos) {
           let mut chunk = Chunk::<A::Cell, S>::new();
           for (local, value) in chunk.cells_mut() {
             let pos = crate::grid::compose::<S>(pos, local);
-            *value = self.automata_rules.simulate(pos, &self.state);
+            *value = self.rules.simulate(pos, &self.state);
           };
 
           entry.insert(chunk);
@@ -71,26 +71,10 @@ impl<A: AutomataRules<S>, H: BuildHasher, const S: usize> Automata<A, S, H> {
     swap(&mut self.state, scratch);
   }
 
-  pub fn get_rules(&self) -> &A {
-    &self.automata_rules
-  }
-
-  pub fn get_rules_mut(&mut self) -> &mut A {
-    &mut self.automata_rules
-  }
-
-  pub fn get_state(&self) -> &ExGrid<A::Cell, S, H> {
-    &self.state
-  }
-
-  pub fn get_state_mut(&mut self) -> &mut ExGrid<A::Cell, S, H> {
-    &mut self.state
-  }
-
   pub fn clean_up(&mut self) {
     self.state.retain(|_, &mut ref chunk| {
       chunk.iter().any(|cell| {
-        !self.automata_rules.empty_cell(cell)
+        !self.rules.empty_cell(cell)
       })
     });
   }
