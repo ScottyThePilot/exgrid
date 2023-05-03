@@ -8,7 +8,7 @@ use std::mem::swap;
 
 
 
-pub trait AutomataRules<const S: usize> {
+pub trait AutomataRules<const S: usize, H = RandomState> {
   type Cell: Default + Clone;
 
   /// Rule that determines when new neighboring chunks should be created in order to
@@ -16,7 +16,7 @@ pub trait AutomataRules<const S: usize> {
   fn expansion(&mut self, chunk: &Chunk<Self::Cell, S>) -> Expansion8;
 
   /// Rule that determines the value of a given cell based on the current state of the automata.
-  fn simulate<H>(&mut self, pos: GlobalPos, grid: &ExGrid<Self::Cell, S, H>) -> Self::Cell;
+  fn simulate(&mut self, pos: GlobalPos, grid: &ExGrid<Self::Cell, S, H>) -> Self::Cell;
 
   /// Rule that determines whether or not a cell is "empty".
   /// A chunk containing empty cells will be erased by [`Automata::clean_up`] if all of its cells pass this check.
@@ -27,12 +27,12 @@ pub trait AutomataRules<const S: usize> {
   }
 }
 
-pub struct Automata<A: AutomataRules<S>, const S: usize, H = RandomState> {
+pub struct Automata<A: AutomataRules<S, H>, const S: usize, H = RandomState> {
   pub state: ExGrid<A::Cell, S, H>,
   pub rules: A
 }
 
-impl<A: AutomataRules<S>, H: BuildHasher, const S: usize> Automata<A, S, H> {
+impl<A: AutomataRules<S, H>, H: BuildHasher, const S: usize> Automata<A, S, H> {
   pub fn new(rules: A) -> Self where H: Default {
     Self::with_state(rules, ExGrid::new())
   }
