@@ -3,6 +3,7 @@ mod iter;
 pub use self::iter::*;
 use crate::{GlobalPos, ChunkPos, LocalPos};
 use crate::chunk::*;
+use crate::vector::{Lerp, Vector2};
 
 #[cfg(feature = "multi-thread")]
 use rayon::collections::hash_map::{
@@ -14,7 +15,6 @@ use rayon::iter::{
   IntoParallelRefIterator,
   IntoParallelRefMutIterator
 };
-use vek::{Lerp, Vec2};
 
 use std::collections::hash_map::{
   Entry, HashMap, RandomState,
@@ -140,18 +140,20 @@ impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
 
   /// Samples a value from the grid, linearly interpolating the result value.
   /// Will return `None` if any of the relevant nearby cells are empty.
-  pub fn try_sample(&self, pos: impl Into<Vec2<f32>>) -> Option<T>
+  pub fn try_sample(&self, pos: impl Into<[f32; 2]>) -> Option<T>
   where T: Lerp<Output = T> + Clone {
-    crate::chunk::try_sample_2d(pos.into(), |pos: Vec2<i64>| {
+    let pos = Vector2::from_array(pos.into());
+    crate::chunk::try_sample_2d(pos, |pos: Vector2<i64>| {
       self.get(pos).cloned()
     })
   }
 
   /// Samples a value from the grid, linearly interpolating the result value.
   /// Uses `T`'s `Default` value whenever a relevant cell is empty.
-  pub fn sample_or_default(&self, pos: impl Into<Vec2<f32>>) -> T
+  pub fn sample_or_default(&self, pos: impl Into<[f32; 2]>) -> T
   where T: Lerp<Output = T> + Default + Clone {
-    crate::chunk::sample_2d(pos.into(), |pos: Vec2<i64>| {
+    let pos = Vector2::from_array(pos.into());
+    crate::chunk::sample_2d(pos, |pos: Vector2<i64>| {
       self.get(pos).cloned().unwrap_or_default()
     })
   }
@@ -352,18 +354,20 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
 
   /// Samples a value from the grid, linearly interpolating the result value.
   /// Will return `None` if any of the relevant nearby cells are empty.
-  pub fn try_sample(&self, pos: impl Into<Vec2<f32>>) -> Option<T>
+  pub fn try_sample(&self, pos: impl Into<[f32; 2]>) -> Option<T>
   where T: Lerp<Output = T> + Clone {
-    crate::chunk::try_sample_2d(pos.into(), |pos: Vec2<i64>| {
+    let pos = Vector2::from_array(pos.into());
+    crate::chunk::try_sample_2d(pos, |pos: Vector2<i64>| {
       self.get(pos).cloned()
     })
   }
 
   /// Samples a value from the grid, linearly interpolating the result value.
   /// Uses `T`'s `Default` value whenever a relevant cell is empty.
-  pub fn sample_or_default(&self, pos: impl Into<Vec2<f32>>) -> T
+  pub fn sample_or_default(&self, pos: impl Into<[f32; 2]>) -> T
   where T: Lerp<Output = T> + Default + Clone {
-    crate::chunk::sample_2d(pos.into(), |pos: Vec2<i64>| {
+    let pos = Vector2::from_array(pos.into());
+    crate::chunk::sample_2d(pos, |pos: Vector2<i64>| {
       self.get(pos).cloned().unwrap_or_default()
     })
   }
@@ -371,9 +375,10 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
   /// Samples a value from the grid, linearly interpolating the result value.
   /// Uses `T`'s `Default` value whenever a relevant cell is empty,
   /// inserting that value into the empty cell.
-  pub fn sample_insert_default(&mut self, pos: impl Into<Vec2<f32>>) -> T
+  pub fn sample_insert_default(&mut self, pos: impl Into<[f32; 2]>) -> T
   where T: Lerp<Output = T> + Default + Clone {
-    crate::chunk::sample_2d(pos.into(), |pos: Vec2<i64>| {
+    let pos = Vector2::from_array(pos.into());
+    crate::chunk::sample_2d(pos, |pos: Vector2<i64>| {
       self.get_mut_default(pos).clone()
     })
   }
@@ -502,7 +507,9 @@ pub fn decompose<const S: usize>(pos: GlobalPos) -> (ChunkPos, LocalPos) {
 
 pub fn compose<const S: usize>(chunk: ChunkPos, local: LocalPos) -> GlobalPos {
   assert!(S > 0, "cannot index into a grid or chunk of size 0");
-  chunk.as_::<i64>() * S as i64 + local.as_::<i64>()
+  let chunk = Vector2::from_array(chunk);
+  let local = Vector2::from_array(local);
+  Vector2::into_array(chunk.cast::<i64>() * S as i64 + local.cast::<i64>())
 }
 
 fn chunks_bounds<C, H>(chunks: &HashMap<ChunkPos, C, H>) -> Option<(ChunkPos, ChunkPos)> {
@@ -513,5 +520,5 @@ fn chunks_bounds<C, H>(chunks: &HashMap<ChunkPos, C, H>) -> Option<(ChunkPos, Ch
 }
 
 fn map_total_bounds<const S: usize>((min, max): (ChunkPos, ChunkPos)) -> (GlobalPos, GlobalPos) {
-  (compose::<S>(min, LocalPos::zero()), compose::<S>(max, LocalPos::broadcast(S - 1)))
+  (compose::<S>(min, [0; 2]), compose::<S>(max, [S - 1; 2]))
 }

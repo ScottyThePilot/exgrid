@@ -6,15 +6,15 @@ pub use self::iter::*;
 #[cfg(feature = "multi-thread")]
 pub use self::iter_par::*;
 use crate::LocalPos;
+use crate::vector::{Lerp, Vector2};
 
+use num_traits::AsPrimitive;
 #[cfg(feature = "multi-thread")]
 use rayon::iter::{
   IntoParallelIterator,
   IntoParallelRefIterator,
   IntoParallelRefMutIterator,
 };
-use vek::num_traits::AsPrimitive;
-use vek::{Lerp, Vec2};
 
 use std::ops::{Index, IndexMut};
 
@@ -31,7 +31,7 @@ impl<T, const S: usize> ChunkSparse<T, S> {
     Self::default()
   }
 
-  pub fn init<F: FnMut(Vec2<usize>) -> Option<T>>(f: F) -> Self {
+  pub fn init<F: FnMut(LocalPos) -> Option<T>>(f: F) -> Self {
     ChunkSparse { inner: Chunk::init(f) }
   }
 
@@ -63,11 +63,11 @@ impl<T, const S: usize> ChunkSparse<T, S> {
     &self[pos.into()]
   }
 
-  pub fn sample(&self, pos: impl Into<Vec2<f32>>) -> Option<T>
+  pub fn sample(&self, pos: impl Into<[f32; 2]>) -> Option<T>
   where T: Lerp<Output = T> + Clone {
-    let pos: Vec2<f32> = pos.into();
+    let pos = Vector2::from_array(pos.into());
     Chunk::<T, S>::assert_bounds_f(pos);
-    try_sample_2d(pos, |pos: Vec2<usize>| {
+    try_sample_2d(pos, |pos: Vector2<usize>| {
       self[pos].as_ref().cloned()
     })
   }
@@ -97,9 +97,17 @@ impl<T, const S: usize> ChunkSparse<T, S> {
     self.inner.horizontal_slice(y)
   }
 
+  pub(crate) fn horizontal_slice_iter(&self, y: usize) -> impl Iterator<Item = &Option<T>> {
+    self.inner.horizontal_slice_iter(y)
+  }
+
   pub fn vertical_slice(&self, x: usize) -> [Option<T>; S]
   where T: Clone {
     self.inner.vertical_slice(x)
+  }
+
+  pub(crate) fn vertical_slice_iter(&self, x: usize) -> impl Iterator<Item = &Option<T>> {
+    self.inner.vertical_slice_iter(x)
   }
 
   #[inline]
@@ -133,6 +141,22 @@ impl<T, const S: usize> ChunkSparse<T, S> {
   const NEW_INTO_CELLS: FilterIntoCells<T, S> = |(i, v)| v.map(|v| (i, v));
 }
 
+impl<T, const S: usize> Index<Vector2<usize>> for ChunkSparse<T, S> {
+  type Output = Option<T>;
+
+  #[inline]
+  fn index(&self, pos: Vector2<usize>) -> &Option<T> {
+    &self.inner[pos]
+  }
+}
+
+impl<T, const S: usize> IndexMut<Vector2<usize>> for ChunkSparse<T, S> {
+  #[inline]
+  fn index_mut(&mut self, pos: Vector2<usize>) -> &mut Option<T> {
+    &mut self.inner[pos]
+  }
+}
+
 impl<T, const S: usize> Index<LocalPos> for ChunkSparse<T, S> {
   type Output = Option<T>;
 
@@ -146,22 +170,6 @@ impl<T, const S: usize> IndexMut<LocalPos> for ChunkSparse<T, S> {
   #[inline]
   fn index_mut(&mut self, pos: LocalPos) -> &mut Option<T> {
     &mut self.inner[pos]
-  }
-}
-
-impl<T, const S: usize> IndexMut<[usize; 2]> for ChunkSparse<T, S> {
-  #[inline]
-  fn index_mut(&mut self, pos: [usize; 2]) -> &mut Option<T> {
-    &mut self.inner[pos]
-  }
-}
-
-impl<T, const S: usize> Index<[usize; 2]> for ChunkSparse<T, S> {
-  type Output = Option<T>;
-
-  #[inline]
-  fn index(&self, pos: [usize; 2]) -> &Option<T> {
-    &self.inner[pos]
   }
 }
 
@@ -282,7 +290,7 @@ impl<T, const S: usize> Chunk<T, S> {
     Self::default()
   }
 
-  pub fn init<F: FnMut(Vec2<usize>) -> T>(f: F) -> Self {
+  pub fn init<F: FnMut(LocalPos) -> T>(f: F) -> Self {
     Chunk { inner: new_inner(f) }
   }
 
@@ -296,11 +304,11 @@ impl<T, const S: usize> Chunk<T, S> {
     &self[pos.into()]
   }
 
-  pub fn sample(&self, pos: impl Into<Vec2<f32>>) -> T
+  pub fn sample(&self, pos: impl Into<[f32; 2]>) -> T
   where T: Lerp<Output = T> + Clone {
-    let pos: Vec2<f32> = pos.into();
+    let pos = Vector2::from_array(pos.into());
     Self::assert_bounds_f(pos);
-    sample_2d(pos, |pos: Vec2<usize>| {
+    sample_2d(pos, |pos: Vector2<usize>| {
       self[pos].clone()
     })
   }
@@ -364,12 +372,12 @@ impl<T, const S: usize> Chunk<T, S> {
     ChunkIntoCells::new(self)
   }
 
-  fn assert_bounds_f(pos: Vec2<f32>) {
+  fn assert_bounds_f(pos: Vector2<f32>) {
     let in_bounds = pos.x >= 0.0 && pos.y >= 0.0 && pos.x < S as f32 && pos.y < S as f32;
     assert!(in_bounds, "position out of bound: the size is {S} but the position is {}, {}", pos.x, pos.y);
   }
 
-  fn assert_bounds_u(pos: Vec2<usize>) {
+  fn assert_bounds_u(pos: Vector2<usize>) {
     let in_bounds = pos.x < S && pos.y < S;
     assert!(in_bounds, "position out of bound: the size is {S} but the position is {}, {}", pos.x, pos.y)
   }
@@ -383,37 +391,37 @@ impl<T, const S: usize> Chunk<T, S> {
   }
 }
 
+impl<T, const S: usize> Index<Vector2<usize>> for Chunk<T, S> {
+  type Output = T;
+
+  #[inline]
+  fn index(&self, pos: Vector2<usize>) -> &T {
+    Self::assert_bounds_u(pos);
+    &self.inner[pos.y][pos.x]
+  }
+}
+
+impl<T, const S: usize> IndexMut<Vector2<usize>> for Chunk<T, S> {
+  #[inline]
+  fn index_mut(&mut self, pos: Vector2<usize>) -> &mut T {
+    Self::assert_bounds_u(pos);
+    &mut self.inner[pos.y][pos.x]
+  }
+}
+
 impl<T, const S: usize> Index<LocalPos> for Chunk<T, S> {
   type Output = T;
 
   #[inline]
   fn index(&self, pos: LocalPos) -> &T {
-    Self::assert_bounds_u(pos);
-    &self.inner[pos.y][pos.x]
+    &self[Vector2::from_array(pos)]
   }
 }
 
 impl<T, const S: usize> IndexMut<LocalPos> for Chunk<T, S> {
   #[inline]
   fn index_mut(&mut self, pos: LocalPos) -> &mut T {
-    Self::assert_bounds_u(pos);
-    &mut self.inner[pos.y][pos.x]
-  }
-}
-
-impl<T, const S: usize> Index<[usize; 2]> for Chunk<T, S> {
-  type Output = T;
-
-  #[inline]
-  fn index(&self, pos: [usize; 2]) -> &T {
-    &self[LocalPos::from(pos)]
-  }
-}
-
-impl<T, const S: usize> IndexMut<[usize; 2]> for Chunk<T, S> {
-  #[inline]
-  fn index_mut(&mut self, pos: [usize; 2]) -> &mut T {
-    &mut self[LocalPos::from(pos)]
+    &mut self[Vector2::from_array(pos)]
   }
 }
 
@@ -506,10 +514,10 @@ impl<T: Send, const S: usize> IntoParallelIterator for Chunk<T, S> {
 }
 
 // This is necessary due to the array primitive's `Default` impl not actually being generic across all `N`.
-fn new_inner<T, F: FnMut(Vec2<usize>) -> T, const N: usize>(mut f: F) -> [[T; N]; N] {
+fn new_inner<T, F: FnMut(LocalPos) -> T, const N: usize>(mut f: F) -> [[T; N]; N] {
   std::array::from_fn(|y| {
     std::array::from_fn(|x| {
-      f(Vec2 { x, y })
+      f([x, y])
     })
   })
 }
@@ -541,19 +549,22 @@ fn cast_nested_array_mut<T, const N: usize>(array: &mut [[T; N]; N]) -> &mut [T]
   }
 }
 
-pub(crate) fn lerp_2d<T>(aa: T, ab: T, ba: T, bb: T, factor: Vec2<f32>) -> T
+pub(crate) fn lerp_2d<T>(aa: T, ab: T, ba: T, bb: T, factor: Vector2<f32>) -> T
 where T: Lerp<Output = T> {
-  T::lerp_unclamped(
-    T::lerp_unclamped(aa, ab, factor.y),
-    T::lerp_unclamped(ba, bb, factor.y),
+  T::lerp(
+    T::lerp(aa, ab, factor.y),
+    T::lerp(ba, bb, factor.y),
     factor.x
   )
 }
 
-pub(crate) fn sample_2d<T, D: 'static, F>(pos: Vec2<f32>, mut f: F) -> T
-where T: Lerp<Output = T>, F: FnMut(Vec2<D>) -> T, D: Copy + Eq, f32: AsPrimitive<D> {
-  let min = pos.floor().as_::<D>();
-  let max = pos.ceil().as_::<D>();
+pub(crate) fn sample_2d<T, D, F>(pos: Vector2<f32>, mut f: F) -> T
+where
+  T: Lerp<Output = T>, F: FnMut(Vector2<D>) -> T,
+  D: AsPrimitive<f32> + Eq, f32: AsPrimitive<D>
+{
+  let min = pos.map(f32::floor).cast::<D>();
+  let max = pos.map(f32::ceil).cast::<D>();
   if min == max {
     return f(min);
   };
@@ -561,18 +572,21 @@ where T: Lerp<Output = T>, F: FnMut(Vec2<D>) -> T, D: Copy + Eq, f32: AsPrimitiv
   let factor = pos.map(|v| v.rem_euclid(1.0));
 
   lerp_2d(
-    f(Vec2::new(min.x, min.y)),
-    f(Vec2::new(min.x, max.y)),
-    f(Vec2::new(max.x, min.y)),
-    f(Vec2::new(max.x, max.y)),
+    f(Vector2::new(min.x, min.y)),
+    f(Vector2::new(min.x, max.y)),
+    f(Vector2::new(max.x, min.y)),
+    f(Vector2::new(max.x, max.y)),
     factor
   )
 }
 
-pub(crate) fn try_sample_2d<T, D: 'static, F>(pos: Vec2<f32>, mut f: F) -> Option<T>
-where T: Lerp<Output = T>, F: FnMut(Vec2<D>) -> Option<T>, D: Copy + Eq, f32: AsPrimitive<D> {
-  let min = pos.floor().as_::<D>();
-  let max = pos.ceil().as_::<D>();
+pub(crate) fn try_sample_2d<T, D, F>(pos: Vector2<f32>, mut f: F) -> Option<T>
+where
+  T: Lerp<Output = T>, F: FnMut(Vector2<D>) -> Option<T>,
+  D: AsPrimitive<f32> + Eq, f32: AsPrimitive<D>
+{
+  let min = pos.map(f32::floor).cast::<D>();
+  let max = pos.map(f32::ceil).cast::<D>();
   if min == max {
     return f(min);
   };
@@ -580,10 +594,10 @@ where T: Lerp<Output = T>, F: FnMut(Vec2<D>) -> Option<T>, D: Copy + Eq, f32: As
   let factor = pos.map(|v| v.rem_euclid(1.0));
 
   Some(lerp_2d(
-    f(Vec2::new(min.x, min.y))?,
-    f(Vec2::new(min.x, max.y))?,
-    f(Vec2::new(max.x, min.y))?,
-    f(Vec2::new(max.x, max.y))?,
+    f(Vector2::new(min.x, min.y))?,
+    f(Vector2::new(min.x, max.y))?,
+    f(Vector2::new(max.x, min.y))?,
+    f(Vector2::new(max.x, max.y))?,
     factor
   ))
 }

@@ -2,7 +2,6 @@ extern crate exgrid;
 
 use exgrid::GlobalPos;
 use exgrid::grid::*;
-use vek::Vec2;
 
 use rand::Rng;
 
@@ -80,7 +79,7 @@ fn test_grid_sparse_basics_g<const S: usize>() {
 
 fn random_position(rng: &mut impl Rng) -> GlobalPos {
   let r = (i32::MIN as i64)..=(i32::MAX as i64);
-  Vec2::new(rng.gen_range(r.clone()), rng.gen_range(r))
+  [rng.gen_range(r.clone()), rng.gen_range(r)]
 }
 
 fn random_positions() -> impl Iterator<Item = GlobalPos> {

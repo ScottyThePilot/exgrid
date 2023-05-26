@@ -1,6 +1,5 @@
 #[cfg(feature = "multi-thread")]
 pub extern crate rayon;
-pub extern crate vek;
 
 #[macro_use]
 mod macros;
@@ -8,12 +7,12 @@ mod macros;
 pub mod automata;
 pub mod chunk;
 pub mod grid;
-
-use vek::Vec2;
+mod vector;
 
 pub use crate::chunk::{Chunk, ChunkSparse};
 pub use crate::grid::{ExGrid, ExGridSparse};
+pub use crate::vector::Lerp;
 
-pub type GlobalPos = Vec2<i64>;
-pub type ChunkPos = Vec2<i32>;
-pub type LocalPos = Vec2<usize>;
+pub type GlobalPos = [i64; 2];
+pub type ChunkPos = [i32; 2];
+pub type LocalPos = [usize; 2];

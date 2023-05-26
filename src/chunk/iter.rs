@@ -224,7 +224,7 @@ macro_rules! map {
   ($S:expr, $expr:expr) => {
     match $expr {
       Some((i, item)) => {
-        Some((LocalPos::new(i % $S, i / $S), item))
+        Some(([i % $S, i / $S], item))
       },
       None => None
     }
@@ -233,12 +233,12 @@ macro_rules! map {
 
 /// Converts regular enumeration into 2D enumeration.
 #[derive(Debug, Clone)]
-struct Enumerate2<I, const S: usize> {
+pub(crate) struct Enumerate2<I, const S: usize> {
   inner: Enumerate<I>
 }
 
 impl<I, const S: usize> Enumerate2<I, S> {
-  pub fn new<T>(inner: I) -> Self where I: Iterator<Item = T> {
+  pub(crate) fn new<T>(inner: I) -> Self where I: Iterator<Item = T> {
     Enumerate2 { inner: inner.enumerate() }
   }
 }
@@ -265,7 +265,7 @@ where I: Iterator<Item = T> {
   fn fold<A, F>(self, init: A, mut f: F) -> A
   where F: FnMut(A, Self::Item) -> A {
     self.inner.fold(init, |a, (i, item)| {
-      f(a, (LocalPos::new(i % S, i / S), item))
+      f(a, ([i % S, i / S], item))
     })
   }
 }
@@ -286,7 +286,7 @@ where I: DoubleEndedIterator<Item = T> + ExactSizeIterator {
   fn rfold<A, F>(self, init: A, mut f: F) -> A
   where F: FnMut(A, Self::Item) -> A {
     self.inner.rfold(init, |a, (i, item)| {
-      f(a, (LocalPos::new(i % S, i / S), item))
+      f(a, ([i % S, i / S], item))
     })
   }
 }

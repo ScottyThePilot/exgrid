@@ -238,7 +238,7 @@ pub(crate) struct Compose<I, const S: usize> {
 }
 
 impl<I, const S: usize> Compose<I, S> {
-  pub fn new<T>(chunk: ChunkPos, cells: I) -> Self
+  pub(crate) fn new<T>(chunk: ChunkPos, cells: I) -> Self
   where I: Iterator<Item = (LocalPos, T)> {
     Compose { chunk, cells }
   }
