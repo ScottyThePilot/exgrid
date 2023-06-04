@@ -124,7 +124,7 @@ pub struct ChunkIter<'a, T, const S: usize> {
 
 impl<'a, T, const S: usize> ChunkIter<'a, T, S> {
   pub(crate) fn new(chunk: &'a Chunk<T, S>) -> Self {
-    let inner = super::cast_nested_array_ref(&chunk.inner).iter();
+    let inner = super::from_nested_array_ref(&chunk.inner).iter();
     ChunkIter { inner }
   }
 }
@@ -141,7 +141,7 @@ pub struct ChunkIterMut<'a, T, const S: usize> {
 
 impl<'a, T, const S: usize> ChunkIterMut<'a, T, S> {
   pub(crate) fn new(chunk: &'a mut Chunk<T, S>) -> Self {
-    let inner = super::cast_nested_array_mut(&mut chunk.inner).iter_mut();
+    let inner = super::from_nested_array_mut(&mut chunk.inner).iter_mut();
     ChunkIterMut { inner }
   }
 }
@@ -158,7 +158,7 @@ pub struct ChunkIntoIter<T, const S: usize> {
 
 impl<T, const S: usize> ChunkIntoIter<T, S> {
   pub(crate) fn new(chunk: Chunk<T, S>) -> Self {
-    let inner = Vec::from(super::cast_nested_array(chunk.inner)).into_iter();
+    let inner = Vec::from(super::from_nested_array(chunk.inner)).into_iter();
     ChunkIntoIter { inner }
   }
 }

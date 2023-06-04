@@ -15,6 +15,8 @@ use rayon::iter::{
   IntoParallelRefIterator,
   IntoParallelRefMutIterator
 };
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::collections::hash_map::{
   Entry, HashMap, RandomState,
@@ -39,6 +41,14 @@ impl<T, H, const S: usize> ExGridSparse<T, S, H> {
 
   pub fn clear(&mut self) {
     self.chunks.clear();
+  }
+
+  pub fn chunks_count(&self) -> usize {
+    self.chunks.len()
+  }
+
+  pub fn cells_count_max(&self) -> usize {
+    self.chunks.len() * S * S
   }
 
   pub fn clean_up(&mut self) {
@@ -210,6 +220,14 @@ impl<T, H: Default, const S: usize> Default for ExGridSparse<T, S, H> {
   }
 }
 
+impl<T: Eq, H: BuildHasher, const S: usize> Eq for ExGridSparse<T, S, H> {}
+
+impl<T: PartialEq, H: BuildHasher, const S: usize> PartialEq for ExGridSparse<T, S, H> {
+  fn eq(&self, other: &Self) -> bool {
+    self.chunks == other.chunks
+  }
+}
+
 impl<'a, T, H, const S: usize> IntoIterator for &'a ExGridSparse<T, S, H> {
   type Item = &'a T;
   type IntoIter = ExGridSparseIter<'a, T, S>;
@@ -237,6 +255,24 @@ impl<T, H, const S: usize> IntoIterator for ExGridSparse<T, S, H> {
   #[inline]
   fn into_iter(self) -> Self::IntoIter {
     ExGridSparseIntoIter::new(self)
+  }
+}
+
+#[cfg(feature = "serde")]
+impl<T, const L: usize, H> Serialize for ExGridSparse<T, L, H>
+where T: Serialize {
+  #[inline]
+  fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+    HashMap::serialize(&self.chunks, serializer)
+  }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, T, const L: usize, H> Deserialize<'de> for ExGridSparse<T, L, H>
+where T: Deserialize<'de>, H: BuildHasher + Default {
+  #[inline]
+  fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+    HashMap::deserialize(deserializer).map(|chunks| ExGridSparse { chunks })
   }
 }
 
@@ -275,6 +311,14 @@ impl<T, H, const S: usize> ExGrid<T, S, H> {
 
   pub fn clear(&mut self) {
     self.chunks.clear();
+  }
+
+  pub fn chunks_count(&self) -> usize {
+    self.chunks.len()
+  }
+
+  pub fn cells_count(&self) -> usize {
+    self.chunks.len() * S * S
   }
 
   /// Returns two points `(min, max)` that bound a box containing the all chunks in this grid.
@@ -437,6 +481,14 @@ impl<T, H: Default, const S: usize> Default for ExGrid<T, S, H> {
   }
 }
 
+impl<T: Eq, H: BuildHasher, const S: usize> Eq for ExGrid<T, S, H> {}
+
+impl<T: PartialEq, H: BuildHasher, const S: usize> PartialEq for ExGrid<T, S, H> {
+  fn eq(&self, other: &Self) -> bool {
+    self.chunks == other.chunks
+  }
+}
+
 impl<'a, T, H, const S: usize> IntoIterator for &'a ExGrid<T, S, H> {
   type Item = &'a T;
   type IntoIter = ExGridIter<'a, T, S>;
@@ -464,6 +516,24 @@ impl<T, H, const S: usize> IntoIterator for ExGrid<T, S, H> {
   #[inline]
   fn into_iter(self) -> Self::IntoIter {
     ExGridIntoIter::new(self)
+  }
+}
+
+#[cfg(feature = "serde")]
+impl<T, const L: usize, H> Serialize for ExGrid<T, L, H>
+where T: Serialize {
+  #[inline]
+  fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+    HashMap::serialize(&self.chunks, serializer)
+  }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, T, const L: usize, H> Deserialize<'de> for ExGrid<T, L, H>
+where T: Deserialize<'de>, H: BuildHasher + Default {
+  #[inline]
+  fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+    HashMap::deserialize(deserializer).map(|chunks| ExGrid { chunks })
   }
 }
 

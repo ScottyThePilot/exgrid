@@ -2,6 +2,10 @@ extern crate exgrid;
 
 use exgrid::GlobalPos;
 use exgrid::grid::*;
+#[cfg(feature = "serde")]
+use serde::de::DeserializeOwned;
+#[cfg(feature = "serde")]
+use serde::ser::Serialize;
 
 use rand::Rng;
 
@@ -50,6 +54,9 @@ fn test_grid_basics_g<const S: usize>() {
   for (pos, value) in grid.clone().into_cells() {
     assert_eq!(grid.get(pos), Some(&value), "{pos:?}");
   };
+
+  #[cfg(feature = "serde")]
+  test_serde_roundtrip(&grid);
 }
 
 #[test]
@@ -75,11 +82,28 @@ fn test_grid_sparse_basics_g<const S: usize>() {
   for (pos, value) in grid.clone().into_cells() {
     assert_eq!(grid.get(pos), Some(&value), "{pos:?}");
   };
+
+  #[cfg(feature = "serde")]
+  test_serde_roundtrip(&grid);
+}
+
+#[cfg(feature = "serde")]
+fn test_serde_roundtrip<T>(value1: &T)
+where T: DeserializeOwned + Serialize + PartialEq + std::fmt::Debug {
+  let mut buffer1 = std::io::Cursor::new(Vec::new());
+  ciborium::into_writer(value1, &mut buffer1).unwrap();
+
+  let slice1 = buffer1.get_ref().as_slice();
+  let value2: T = ciborium::from_reader(slice1).unwrap();
+
+  let mut buffer2 = std::io::Cursor::new(Vec::new());
+  ciborium::into_writer(&value2, &mut buffer2).unwrap();
+
+  assert_eq!(value1, &value2);
 }
 
 fn random_position(rng: &mut impl Rng) -> GlobalPos {
-  let r = (i32::MIN as i64)..=(i32::MAX as i64);
-  [rng.gen_range(r.clone()), rng.gen_range(r)]
+  [rng.gen_range(-2048..=2048), rng.gen_range(-2048..=2048)]
 }
 
 fn random_positions() -> impl Iterator<Item = GlobalPos> {

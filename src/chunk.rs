@@ -1,10 +1,14 @@
 mod iter;
 #[cfg(feature = "multi-thread")]
 mod iter_par;
+#[cfg(feature = "serde")]
+mod nested_array;
 
 pub use self::iter::*;
 #[cfg(feature = "multi-thread")]
 pub use self::iter_par::*;
+#[cfg(feature = "serde")]
+use self::nested_array::NestedArray;
 use crate::LocalPos;
 use crate::vector::{Lerp, Vector2};
 
@@ -15,6 +19,8 @@ use rayon::iter::{
   IntoParallelRefIterator,
   IntoParallelRefMutIterator,
 };
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::ops::{Index, IndexMut};
 
@@ -194,7 +200,7 @@ impl<T, const S: usize> From<ChunkSparse<T, S>> for [[Option<T>; S]; S] {
 
 impl<T, const S: usize> From<ChunkSparse<T, S>> for Box<[Option<T>]> {
   fn from(chunk: ChunkSparse<T, S>) -> Self {
-    cast_nested_array(chunk.inner.inner)
+    from_nested_array(chunk.inner.inner)
   }
 }
 
@@ -273,6 +279,24 @@ impl<T: Send, const S: usize> IntoParallelIterator for ChunkSparse<T, S> {
   }
 }
 
+#[cfg(feature = "serde")]
+impl<T, const L: usize> Serialize for ChunkSparse<T, L>
+where T: Serialize {
+  #[inline]
+  fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+    Chunk::serialize(&self.inner, serializer)
+  }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, T, const L: usize> Deserialize<'de> for ChunkSparse<T, L>
+where T: Deserialize<'de> {
+  #[inline]
+  fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+    Chunk::deserialize(deserializer).map(ChunkSparse::from)
+  }
+}
+
 type FilterCells<T, const S: usize> = for<'a> fn((LocalPos, &'a Option<T>)) -> Option<(LocalPos, &'a T)>;
 type FilterCellsMut<T, const S: usize> = for<'a> fn((LocalPos, &'a mut Option<T>)) -> Option<(LocalPos, &'a mut T)>;
 type FilterIntoCells<T, const S: usize> = fn((LocalPos, Option<T>)) -> Option<(LocalPos, T)>;
@@ -314,7 +338,7 @@ impl<T, const S: usize> Chunk<T, S> {
   }
 
   pub fn to_vec(&self) -> Vec<T> where T: Clone {
-    Vec::from(cast_nested_array(self.inner.clone()))
+    Vec::from(from_nested_array(self.inner.clone()))
   }
 
   pub fn horizontal_slice(&self, y: usize) -> [T; S] where T: Clone {
@@ -446,7 +470,7 @@ impl<T, const S: usize> From<Chunk<T, S>> for [[T; S]; S] {
 
 impl<T, const S: usize> From<Chunk<T, S>> for Box<[T]> {
   fn from(chunk: Chunk<T, S>) -> Self {
-    cast_nested_array(chunk.inner)
+    from_nested_array(chunk.inner)
   }
 }
 
@@ -513,6 +537,25 @@ impl<T: Send, const S: usize> IntoParallelIterator for Chunk<T, S> {
   }
 }
 
+#[cfg(feature = "serde")]
+impl<T, const L: usize> Serialize for Chunk<T, L>
+where T: Serialize {
+  fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+    let nested_array = self::nested_array::from_inner_ref(&self.inner);
+    <NestedArray<T, L>>::serialize(nested_array, serializer)
+  }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, T, const L: usize> Deserialize<'de> for Chunk<T, L>
+where T: Deserialize<'de> {
+  fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+    <NestedArray<T, L>>::deserialize(deserializer).map(|nested_array| {
+      Chunk { inner: self::nested_array::into_inner(nested_array) }
+    })
+  }
+}
+
 // This is necessary due to the array primitive's `Default` impl not actually being generic across all `N`.
 fn new_inner<T, F: FnMut(LocalPos) -> T, const N: usize>(mut f: F) -> [[T; N]; N] {
   std::array::from_fn(|y| {
@@ -522,7 +565,7 @@ fn new_inner<T, F: FnMut(LocalPos) -> T, const N: usize>(mut f: F) -> [[T; N]; N
   })
 }
 
-fn cast_nested_array<T, const N: usize>(array: [[T; N]; N]) -> Box<[T]> {
+fn from_nested_array<T, const N: usize>(array: [[T; N]; N]) -> Box<[T]> {
   let Some(len) = usize::checked_mul(N, N) else { panic!() };
   let array: Box<[[T; N]; N]> = Box::new(array);
   unsafe {
@@ -533,7 +576,7 @@ fn cast_nested_array<T, const N: usize>(array: [[T; N]; N]) -> Box<[T]> {
   }
 }
 
-fn cast_nested_array_ref<T, const N: usize>(array: &[[T; N]; N]) -> &[T] {
+fn from_nested_array_ref<T, const N: usize>(array: &[[T; N]; N]) -> &[T] {
   let Some(len) = usize::checked_mul(N, N) else { panic!() };
   unsafe {
     let ptr = array as *const [[T; N]; N] as *const T;
@@ -541,7 +584,7 @@ fn cast_nested_array_ref<T, const N: usize>(array: &[[T; N]; N]) -> &[T] {
   }
 }
 
-fn cast_nested_array_mut<T, const N: usize>(array: &mut [[T; N]; N]) -> &mut [T] {
+fn from_nested_array_mut<T, const N: usize>(array: &mut [[T; N]; N]) -> &mut [T] {
   let Some(len) = usize::checked_mul(N, N) else { panic!() };
   unsafe {
     let ptr = array as *mut [[T; N]; N] as *mut T;
