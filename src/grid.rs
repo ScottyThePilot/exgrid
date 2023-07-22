@@ -174,6 +174,10 @@ impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
     replace(self.get_mut_default(pos), Some(value))
   }
 
+  pub fn contains_chunk(&self, pos: impl Into<ChunkPos>) -> bool {
+    self.chunks.contains_key(&pos.into())
+  }
+
   pub fn get_chunk(&self, pos: impl Into<ChunkPos>) -> Option<&ChunkSparse<T, S>> {
     self.chunks.get(&pos.into())
   }
@@ -432,6 +436,10 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
   pub fn insert_default(&mut self, pos: impl Into<GlobalPos>, value: T) -> T
   where T: Default {
     replace(self.get_mut_default(pos), value)
+  }
+
+  pub fn contains_chunk(&self, pos: impl Into<ChunkPos>) -> bool {
+    self.chunks.contains_key(&pos.into())
   }
 
   pub fn get_chunk(&self, pos: impl Into<ChunkPos>) -> Option<&Chunk<T, S>> {
