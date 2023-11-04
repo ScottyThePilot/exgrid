@@ -1,8 +1,8 @@
 mod iter;
 
 pub use self::iter::*;
-use crate::{GlobalPos, ChunkPos, LocalPos};
-use crate::chunk::*;
+use super::{GlobalPos, ChunkPos, LocalPos};
+use super::chunk::*;
 use crate::vector::{Lerp, Vector2};
 
 #[cfg(feature = "multi-thread")]
@@ -153,7 +153,7 @@ impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
   pub fn try_sample(&self, pos: impl Into<[f32; 2]>) -> Option<T>
   where T: Lerp<Output = T> + Clone {
     let pos = Vector2::from_array(pos.into());
-    crate::chunk::try_sample_2d(pos, |pos: Vector2<i64>| {
+    super::chunk::try_sample_2d(pos, |pos: Vector2<i64>| {
       self.get(pos).cloned()
     })
   }
@@ -163,7 +163,7 @@ impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
   pub fn sample_or_default(&self, pos: impl Into<[f32; 2]>) -> T
   where T: Lerp<Output = T> + Default + Clone {
     let pos = Vector2::from_array(pos.into());
-    crate::chunk::sample_2d(pos, |pos: Vector2<i64>| {
+    super::chunk::sample_2d(pos, |pos: Vector2<i64>| {
       self.get(pos).cloned().unwrap_or_default()
     })
   }
@@ -405,7 +405,7 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
   pub fn try_sample(&self, pos: impl Into<[f32; 2]>) -> Option<T>
   where T: Lerp<Output = T> + Clone {
     let pos = Vector2::from_array(pos.into());
-    crate::chunk::try_sample_2d(pos, |pos: Vector2<i64>| {
+    super::chunk::try_sample_2d(pos, |pos: Vector2<i64>| {
       self.get(pos).cloned()
     })
   }
@@ -415,7 +415,7 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
   pub fn sample_or_default(&self, pos: impl Into<[f32; 2]>) -> T
   where T: Lerp<Output = T> + Default + Clone {
     let pos = Vector2::from_array(pos.into());
-    crate::chunk::sample_2d(pos, |pos: Vector2<i64>| {
+    super::chunk::sample_2d(pos, |pos: Vector2<i64>| {
       self.get(pos).cloned().unwrap_or_default()
     })
   }
@@ -426,7 +426,7 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
   pub fn sample_insert_default(&mut self, pos: impl Into<[f32; 2]>) -> T
   where T: Lerp<Output = T> + Default + Clone {
     let pos = Vector2::from_array(pos.into());
-    crate::chunk::sample_2d(pos, |pos: Vector2<i64>| {
+    super::chunk::sample_2d(pos, |pos: Vector2<i64>| {
       self.get_mut_default(pos).clone()
     })
   }

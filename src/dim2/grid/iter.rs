@@ -1,6 +1,6 @@
 use super::{ExGrid, ExGridSparse};
-use crate::{GlobalPos, ChunkPos, LocalPos};
-use crate::chunk::*;
+use crate::dim2::{GlobalPos, ChunkPos, LocalPos};
+use crate::dim2::chunk::*;
 
 use std::collections::hash_map::{
   Iter as HashMapIter,

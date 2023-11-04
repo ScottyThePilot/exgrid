@@ -1,15 +1,18 @@
 mod iter;
 #[cfg(feature = "multi-thread")]
 mod iter_par;
-#[cfg(feature = "serde")]
-mod nested_array;
 
 pub use self::iter::*;
 #[cfg(feature = "multi-thread")]
 pub use self::iter_par::*;
 #[cfg(feature = "serde")]
-use self::nested_array::NestedArray;
-use crate::LocalPos;
+use crate::nested_array::{Array2NestedRepr, Array2Nested};
+use super::LocalPos;
+use crate::misc::{
+  from_2nested_array,
+  from_2nested_array_ref,
+  from_2nested_array_mut
+};
 use crate::vector::{Lerp, Vector2};
 
 use num_traits::AsPrimitive;
@@ -200,7 +203,7 @@ impl<T, const S: usize> From<ChunkSparse<T, S>> for [[Option<T>; S]; S] {
 
 impl<T, const S: usize> From<ChunkSparse<T, S>> for Box<[Option<T>]> {
   fn from(chunk: ChunkSparse<T, S>) -> Self {
-    from_nested_array(chunk.inner.inner)
+    from_2nested_array(chunk.inner.inner)
   }
 }
 
@@ -338,7 +341,7 @@ impl<T, const S: usize> Chunk<T, S> {
   }
 
   pub fn to_vec(&self) -> Vec<T> where T: Clone {
-    Vec::from(from_nested_array(self.inner.clone()))
+    Vec::from(from_2nested_array(self.inner.clone()))
   }
 
   pub fn horizontal_slice(&self, y: usize) -> [T; S] where T: Clone {
@@ -470,7 +473,7 @@ impl<T, const S: usize> From<Chunk<T, S>> for [[T; S]; S] {
 
 impl<T, const S: usize> From<Chunk<T, S>> for Box<[T]> {
   fn from(chunk: Chunk<T, S>) -> Self {
-    from_nested_array(chunk.inner)
+    from_2nested_array(chunk.inner)
   }
 }
 
@@ -541,8 +544,8 @@ impl<T: Send, const S: usize> IntoParallelIterator for Chunk<T, S> {
 impl<T, const L: usize> Serialize for Chunk<T, L>
 where T: Serialize {
   fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-    let nested_array = self::nested_array::from_inner_ref(&self.inner);
-    <NestedArray<T, L>>::serialize(nested_array, serializer)
+    let nested_array = Array2NestedRepr::from_array_ref(&self.inner);
+    <Array2Nested<T, L>>::serialize(nested_array, serializer)
   }
 }
 
@@ -550,8 +553,8 @@ where T: Serialize {
 impl<'de, T, const L: usize> Deserialize<'de> for Chunk<T, L>
 where T: Deserialize<'de> {
   fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-    <NestedArray<T, L>>::deserialize(deserializer).map(|nested_array| {
-      Chunk { inner: self::nested_array::into_inner(nested_array) }
+    <Array2Nested<T, L>>::deserialize(deserializer).map(|nested_array| {
+      Chunk { inner: Array2NestedRepr::into_array(nested_array) }
     })
   }
 }
@@ -563,33 +566,6 @@ fn new_inner<T, F: FnMut(LocalPos) -> T, const N: usize>(mut f: F) -> [[T; N]; N
       f([x, y])
     })
   })
-}
-
-fn from_nested_array<T, const N: usize>(array: [[T; N]; N]) -> Box<[T]> {
-  let Some(len) = usize::checked_mul(N, N) else { panic!() };
-  let array: Box<[[T; N]; N]> = Box::new(array);
-  unsafe {
-    // Convert the box into a pointer, then a wide pointer, then a wide box-pointer
-    let array_ptr = Box::into_raw(array) as *mut T;
-    let ptr = std::slice::from_raw_parts_mut(array_ptr, len) as *mut [T];
-    Box::from_raw(ptr)
-  }
-}
-
-fn from_nested_array_ref<T, const N: usize>(array: &[[T; N]; N]) -> &[T] {
-  let Some(len) = usize::checked_mul(N, N) else { panic!() };
-  unsafe {
-    let ptr = array as *const [[T; N]; N] as *const T;
-    std::slice::from_raw_parts(ptr, len)
-  }
-}
-
-fn from_nested_array_mut<T, const N: usize>(array: &mut [[T; N]; N]) -> &mut [T] {
-  let Some(len) = usize::checked_mul(N, N) else { panic!() };
-  unsafe {
-    let ptr = array as *mut [[T; N]; N] as *mut T;
-    std::slice::from_raw_parts_mut(ptr, len)
-  }
 }
 
 pub(crate) fn lerp_2d<T>(aa: T, ab: T, ba: T, bb: T, factor: Vector2<f32>) -> T

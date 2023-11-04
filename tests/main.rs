@@ -1,7 +1,7 @@
 extern crate exgrid;
 
-use exgrid::GlobalPos;
-use exgrid::grid::*;
+use exgrid::dim2::GlobalPos;
+use exgrid::dim2::grid::*;
 #[cfg(feature = "serde")]
 use serde::de::DeserializeOwned;
 #[cfg(feature = "serde")]

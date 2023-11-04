@@ -3,14 +3,15 @@ pub extern crate rayon;
 
 #[macro_use]
 mod macros;
-#[cfg(feature = "automata")]
-pub mod automata;
-pub mod chunk;
-pub mod grid;
+pub mod dim2;
+pub mod dim3;
+mod misc;
+#[cfg(feature = "serde")]
+mod nested_array;
 mod vector;
 
-pub use crate::chunk::{Chunk, ChunkSparse};
-pub use crate::grid::{ExGrid, ExGridSparse};
+pub use crate::dim2::chunk::{Chunk, ChunkSparse};
+pub use crate::dim2::grid::{ExGrid, ExGridSparse};
 pub use crate::vector::Lerp;
 
 pub type GlobalPos = [i64; 2];

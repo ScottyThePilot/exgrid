@@ -65,7 +65,7 @@ pub struct ChunkIterPar<'data, T: Sync, const S: usize> {
 
 impl<'data, T: Sync, const S: usize> ChunkIterPar<'data, T, S> {
   pub(crate) fn new(chunk: &'data Chunk<T, S>) -> Self {
-    let inner = super::from_nested_array_ref(&chunk.inner).into_par_iter();
+    let inner = super::from_2nested_array_ref(&chunk.inner).into_par_iter();
     ChunkIterPar { inner }
   }
 }
@@ -79,7 +79,7 @@ pub struct ChunkIterMutPar<'data, T: Send, const S: usize> {
 
 impl<'data, T: Send, const S: usize> ChunkIterMutPar<'data, T, S> {
   pub(crate) fn new(chunk: &'data mut Chunk<T, S>) -> Self {
-    let inner = super::from_nested_array_mut(&mut chunk.inner).into_par_iter();
+    let inner = super::from_2nested_array_mut(&mut chunk.inner).into_par_iter();
     ChunkIterMutPar { inner }
   }
 }
@@ -93,7 +93,7 @@ pub struct ChunkIntoIterPar<T: Send, const S: usize> {
 
 impl<T: Send, const S: usize> ChunkIntoIterPar<T, S> {
   pub(crate) fn new(chunk: Chunk<T, S>) -> Self {
-    let inner = Vec::from(super::from_nested_array(chunk.inner)).into_par_iter();
+    let inner = Vec::from(super::from_2nested_array(chunk.inner)).into_par_iter();
     ChunkIntoIterPar { inner }
   }
 }

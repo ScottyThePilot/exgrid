@@ -1,6 +1,6 @@
-use crate::{GlobalPos, ChunkPos};
-use crate::chunk::*;
-use crate::grid::*;
+use super::{GlobalPos, ChunkPos};
+use super::chunk::*;
+use super::grid::*;
 use crate::vector::Vector2;
 
 use num_traits::Signed;
@@ -41,7 +41,7 @@ where T: Default, H: BuildHasher {
         if let Entry::Vacant(entry) = scratch.get_chunk_entry(chunk_pos) {
           let mut chunk = Chunk::new();
           for (local, value) in chunk.cells_mut() {
-            let pos = crate::grid::compose::<S>(chunk_pos, local);
+            let pos = super::grid::compose::<S>(chunk_pos, local);
             *value = automata.simulate(pos, &self);
           };
 
@@ -69,7 +69,7 @@ where H: BuildHasher {
         if let Entry::Vacant(entry) = scratch.get_chunk_entry(chunk_pos) {
           let mut chunk = Chunk::new();
           for (local, value) in chunk.cells_mut() {
-            let pos = crate::grid::compose::<S>(chunk_pos, local);
+            let pos = super::grid::compose::<S>(chunk_pos, local);
             *value = automata.simulate(pos, &self);
           };
 
