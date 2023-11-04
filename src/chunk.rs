@@ -27,7 +27,7 @@ use std::ops::{Index, IndexMut};
 
 
 #[repr(transparent)]
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ChunkSparse<T, const S: usize> {
   inner: Chunk<Option<T>, S>
 }
@@ -304,7 +304,7 @@ type FilterIntoCells<T, const S: usize> = fn((LocalPos, Option<T>)) -> Option<(L
 
 
 #[repr(transparent)]
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Chunk<T, const S: usize> {
   inner: [[T; S]; S]
 }
