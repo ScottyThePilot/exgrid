@@ -106,6 +106,7 @@ macro_rules! vector_impl {
 }
 
 vector_impl!(pub(crate) struct Vector2 { x, y }: 2);
+vector_impl!(pub(crate) struct Vector3 { x, y, z }: 3);
 
 pub trait Lerp<Factor = f32> {
   type Output;
