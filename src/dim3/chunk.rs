@@ -82,22 +82,22 @@ impl<T, const S: usize> ChunkSparse<T, S> {
   }
 
   #[inline]
-  pub fn iter(&self) -> ChunkSparseIter<T, S> {
+  pub fn iter(&self) -> ChunkSparseIter<'_, T, S> {
     self.into_iter()
   }
 
   #[inline]
-  pub fn iter_mut(&mut self) -> ChunkSparseIterMut<T, S> {
+  pub fn iter_mut(&mut self) -> ChunkSparseIterMut<'_, T, S> {
     self.into_iter()
   }
 
   #[inline]
-  pub fn cells(&self) -> ChunkSparseCells<T, S> {
+  pub fn cells(&self) -> ChunkSparseCells<'_, T, S> {
     ChunkSparseCells::new(self)
   }
 
   #[inline]
-  pub fn cells_mut(&mut self) -> ChunkSparseCellsMut<T, S> {
+  pub fn cells_mut(&mut self) -> ChunkSparseCellsMut<'_, T, S> {
     ChunkSparseCellsMut::new(self)
   }
 
@@ -265,22 +265,22 @@ impl<T, const S: usize> Chunk<T, S> {
   }
 
   #[inline]
-  pub fn iter(&self) -> ChunkIter<T, S> {
+  pub fn iter(&self) -> ChunkIter<'_, T, S> {
     self.into_iter()
   }
 
   #[inline]
-  pub fn iter_mut(&mut self) -> ChunkIterMut<T, S> {
+  pub fn iter_mut(&mut self) -> ChunkIterMut<'_, T, S> {
     self.into_iter()
   }
 
   #[inline]
-  pub fn cells(&self) -> ChunkCells<T, S> {
+  pub fn cells(&self) -> ChunkCells<'_, T, S> {
     ChunkCells::new(self)
   }
 
   #[inline]
-  pub fn cells_mut(&mut self) -> ChunkCellsMut<T, S> {
+  pub fn cells_mut(&mut self) -> ChunkCellsMut<'_, T, S> {
     ChunkCellsMut::new(self)
   }
 

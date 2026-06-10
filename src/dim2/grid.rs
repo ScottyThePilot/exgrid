@@ -86,22 +86,22 @@ impl<T, H, const S: usize> ExGridSparse<T, S, H> {
   }
 
   #[inline]
-  pub fn iter(&self) -> ExGridSparseIter<T, S> {
+  pub fn iter(&self) -> ExGridSparseIter<'_, T, S> {
     self.into_iter()
   }
 
   #[inline]
-  pub fn iter_mut(&mut self) -> ExGridSparseIterMut<T, S> {
+  pub fn iter_mut(&mut self) -> ExGridSparseIterMut<'_, T, S> {
     self.into_iter()
   }
 
   #[inline]
-  pub fn cells(&self) -> ExGridSparseCells<T, S> {
+  pub fn cells(&self) -> ExGridSparseCells<'_, T, S> {
     ExGridSparseCells::new(self)
   }
 
   #[inline]
-  pub fn cells_mut(&mut self) -> ExGridSparseCellsMut<T, S> {
+  pub fn cells_mut(&mut self) -> ExGridSparseCellsMut<'_, T, S> {
     ExGridSparseCellsMut::new(self)
   }
 
@@ -111,12 +111,12 @@ impl<T, H, const S: usize> ExGridSparse<T, S, H> {
   }
 
   #[inline]
-  pub fn chunks(&self) -> HashMapIter<ChunkPos, ChunkSparse<T, S>> {
+  pub fn chunks(&self) -> HashMapIter<'_, ChunkPos, ChunkSparse<T, S>> {
     self.chunks.iter()
   }
 
   #[inline]
-  pub fn chunks_mut(&mut self) -> HashMapIterMut<ChunkPos, ChunkSparse<T, S>> {
+  pub fn chunks_mut(&mut self) -> HashMapIterMut<'_, ChunkPos, ChunkSparse<T, S>> {
     self.chunks.iter_mut()
   }
 
@@ -190,25 +190,25 @@ impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
     self.get_chunk_entry(pos).or_default()
   }
 
-  pub fn get_chunk_entry(&mut self, pos: impl Into<ChunkPos>) -> Entry<ChunkPos, ChunkSparse<T, S>> {
+  pub fn get_chunk_entry(&mut self, pos: impl Into<ChunkPos>) -> Entry<'_, ChunkPos, ChunkSparse<T, S>> {
     self.chunks.entry(pos.into())
   }
 
   #[cfg(feature = "multi-thread")]
   #[inline]
-  pub fn par_chunks(&self) -> HashMapIterPar<ChunkPos, ChunkSparse<T, S>>
+  pub fn par_chunks(&self) -> HashMapIterPar<'_, ChunkPos, ChunkSparse<T, S>>
   where T: Sync {
     self.chunks.par_iter()
   }
 
   #[cfg(feature = "multi-thread")]
   #[inline]
-  pub fn par_chunks_mut(&mut self) -> HashMapIterMutPar<ChunkPos, ChunkSparse<T, S>>
+  pub fn par_chunks_mut(&mut self) -> HashMapIterMutPar<'_, ChunkPos, ChunkSparse<T, S>>
   where T: Send {
     self.chunks.par_iter_mut()
   }
 
-  pub fn entry(&mut self, pos: impl Into<GlobalPos>) -> ExGridSparseEntry<T, S> {
+  pub fn entry(&mut self, pos: impl Into<GlobalPos>) -> ExGridSparseEntry<'_, T, S> {
     let (chunk, local) = decompose::<S>(pos.into());
     ExGridSparseEntry {
       entry: self.chunks.entry(chunk),
@@ -341,22 +341,22 @@ impl<T, H, const S: usize> ExGrid<T, S, H> {
   }
 
   #[inline]
-  pub fn iter(&self) -> ExGridIter<T, S> {
+  pub fn iter(&self) -> ExGridIter<'_, T, S> {
     self.into_iter()
   }
 
   #[inline]
-  pub fn iter_mut(&mut self) -> ExGridIterMut<T, S> {
+  pub fn iter_mut(&mut self) -> ExGridIterMut<'_, T, S> {
     self.into_iter()
   }
 
   #[inline]
-  pub fn cells(&self) -> ExGridCells<T, S> {
+  pub fn cells(&self) -> ExGridCells<'_, T, S> {
     ExGridCells::new(self)
   }
 
   #[inline]
-  pub fn cells_mut(&mut self) -> ExGridCellsMut<T, S> {
+  pub fn cells_mut(&mut self) -> ExGridCellsMut<'_, T, S> {
     ExGridCellsMut::new(self)
   }
 
@@ -366,12 +366,12 @@ impl<T, H, const S: usize> ExGrid<T, S, H> {
   }
 
   #[inline]
-  pub fn chunks(&self) -> HashMapIter<ChunkPos, Chunk<T, S>> {
+  pub fn chunks(&self) -> HashMapIter<'_, ChunkPos, Chunk<T, S>> {
     self.chunks.iter()
   }
 
   #[inline]
-  pub fn chunks_mut(&mut self) -> HashMapIterMut<ChunkPos, Chunk<T, S>> {
+  pub fn chunks_mut(&mut self) -> HashMapIterMut<'_, ChunkPos, Chunk<T, S>> {
     self.chunks.iter_mut()
   }
 
@@ -455,25 +455,25 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
     self.get_chunk_entry(pos).or_default()
   }
 
-  pub fn get_chunk_entry(&mut self, pos: impl Into<ChunkPos>) -> Entry<ChunkPos, Chunk<T, S>> {
+  pub fn get_chunk_entry(&mut self, pos: impl Into<ChunkPos>) -> Entry<'_, ChunkPos, Chunk<T, S>> {
     self.chunks.entry(pos.into())
   }
 
   #[cfg(feature = "multi-thread")]
   #[inline]
-  pub fn par_chunks(&self) -> HashMapIterPar<ChunkPos, Chunk<T, S>>
+  pub fn par_chunks(&self) -> HashMapIterPar<'_, ChunkPos, Chunk<T, S>>
   where T: Sync {
     self.chunks.par_iter()
   }
 
   #[cfg(feature = "multi-thread")]
   #[inline]
-  pub fn par_chunks_mut(&mut self) -> HashMapIterMutPar<ChunkPos, Chunk<T, S>>
+  pub fn par_chunks_mut(&mut self) -> HashMapIterMutPar<'_, ChunkPos, Chunk<T, S>>
   where T: Send {
     self.chunks.par_iter_mut()
   }
 
-  pub fn entry(&mut self, pos: impl Into<GlobalPos>) -> ExGridEntry<T, S> {
+  pub fn entry(&mut self, pos: impl Into<GlobalPos>) -> ExGridEntry<'_, T, S> {
     let (chunk, local) = decompose::<S>(pos.into());
     ExGridEntry {
       entry: self.chunks.entry(chunk),
