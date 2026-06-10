@@ -72,6 +72,11 @@ impl<T, const S: usize> ChunkSparse<T, S> {
     &self[pos.into()]
   }
 
+  #[inline]
+  pub fn get_mut(&mut self, pos: impl Into<LocalPos>) -> &mut Option<T> {
+    &mut self[pos.into()]
+  }
+
   pub fn sample(&self, pos: impl Into<[f32; 2]>) -> Option<T>
   where T: Lerp<Output = T> + Clone {
     let pos = Vector2::from_array(pos.into());
@@ -329,6 +334,11 @@ impl<T, const S: usize> Chunk<T, S> {
   #[inline]
   pub fn get(&self, pos: impl Into<LocalPos>) -> &T {
     &self[pos.into()]
+  }
+
+  #[inline]
+  pub fn get_mut(&mut self, pos: impl Into<LocalPos>) -> &mut T {
+    &mut self[pos.into()]
   }
 
   pub fn sample(&self, pos: impl Into<[f32; 2]>) -> T

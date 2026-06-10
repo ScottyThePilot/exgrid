@@ -61,6 +61,11 @@ impl<T, const S: usize> ChunkSparse<T, S> {
     &self[pos.into()]
   }
 
+  #[inline]
+  pub fn get_mut(&mut self, pos: impl Into<LocalPos>) -> &mut Option<T> {
+    &mut self[pos.into()]
+  }
+
   pub fn to_vec(&self) -> Vec<Option<T>> where T: Clone {
     self.inner.to_vec()
   }
@@ -258,6 +263,11 @@ impl<T, const S: usize> Chunk<T, S> {
   #[inline]
   pub fn get(&self, pos: impl Into<LocalPos>) -> &T {
     &self[pos.into()]
+  }
+
+  #[inline]
+  pub fn get_mut(&mut self, pos: impl Into<LocalPos>) -> &mut T {
+    &mut self[pos.into()]
   }
 
   pub fn to_vec(&self) -> Vec<T> where T: Clone {

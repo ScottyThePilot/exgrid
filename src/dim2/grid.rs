@@ -148,6 +148,16 @@ impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
     self.get_mut_default(pos).get_or_insert_with(T::default)
   }
 
+  /// Delegates to [`insert`][ExGridSparse::insert] or [`insert`][ExGridSparse::remove]
+  /// depending on whether `value` is `Some` or `None`.
+  pub fn set(&mut self, pos: impl Into<GlobalPos>, value: Option<T>) -> Option<T> {
+    if let Some(value) = value {
+      self.insert(pos, value)
+    } else {
+      self.remove(pos)
+    }
+  }
+
   /// Samples a value from the grid, linearly interpolating the result value.
   /// Will return `None` if any of the relevant nearby cells are empty.
   pub fn try_sample(&self, pos: impl Into<[f32; 2]>) -> Option<T>
@@ -171,7 +181,14 @@ impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
   /// Sets the value of a given cell, creating a chunk if necessary,
   /// returning any contained value if present.
   pub fn insert(&mut self, pos: impl Into<GlobalPos>, value: T) -> Option<T> {
-    replace(self.get_mut_default(pos), Some(value))
+    self.get_mut_default(pos).replace(value)
+  }
+
+  /// Clears the value of a given cell (without creating a chunk),
+  /// returning the previous contained value if present.
+  pub fn remove(&mut self, pos: impl Into<GlobalPos>) -> Option<T> {
+    let (chunk, local) = decompose::<S>(pos.into());
+    self.get_chunk_mut(chunk).and_then(|c| c[local].take())
   }
 
   pub fn contains_chunk(&self, pos: impl Into<ChunkPos>) -> bool {
@@ -577,14 +594,16 @@ type FilterIntoCells<T, const S: usize> = fn((ChunkPos, Chunk<T, S>)) -> Compose
 /// Converts global coordinates to coordinates for a single chunk
 /// and coordinates to a cell in that chunk.
 pub fn decompose<const S: usize>(pos: GlobalPos) -> (ChunkPos, LocalPos) {
-  assert!(S > 0, "cannot index into a grid or chunk of size 0");
+  assert!(S > 0, "cannot represent chunks of size 0");
+  assert!(S <= i64::MAX as usize, "cannot represent chunks of any size larger than {}", i64::MAX);
   let chunk = pos.map(|p| p.div_euclid(S as i64) as i32);
   let local = pos.map(|p| p.rem_euclid(S as i64) as usize);
   (chunk, local)
 }
 
 pub fn compose<const S: usize>(chunk: ChunkPos, local: LocalPos) -> GlobalPos {
-  assert!(S > 0, "cannot index into a grid or chunk of size 0");
+  assert!(S > 0, "cannot represent chunks of size 0");
+  assert!(S <= i64::MAX as usize, "cannot represent chunks of any size larger than {}", i64::MAX);
   let chunk = Vector2::from_array(chunk);
   let local = Vector2::from_array(local);
   Vector2::into_array(chunk.cast::<i64>() * S as i64 + local.cast::<i64>())
