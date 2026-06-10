@@ -118,6 +118,6 @@ fn random_elements() -> impl Iterator<Item = (GlobalPos, u32)> {
   let mut rng = rand::thread_rng();
   let count = rng.gen_range(16..32);
   std::iter::repeat_with(move || {
-    (random_position(&mut rng), rng.gen::<u32>())
+    (random_position(&mut rng), rng.r#gen::<u32>())
   }).take(count)
 }

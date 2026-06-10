@@ -69,6 +69,11 @@ impl<T, const S: usize> ChunkSparse<T, S> {
     &self[pos.into()]
   }
 
+  #[inline]
+  pub fn get_mut(&mut self, pos: impl Into<LocalPos>) -> &mut Option<T> {
+    &mut self[pos.into()]
+  }
+
   pub fn sample(&self, pos: impl Into<[f32; 2]>) -> Option<T>
   where T: Lerp<Output = T> + Clone {
     let pos = Vector2::from_array(pos.into());
@@ -117,22 +122,22 @@ impl<T, const S: usize> ChunkSparse<T, S> {
   }
 
   #[inline]
-  pub fn iter(&self) -> ChunkSparseIter<T, S> {
+  pub fn iter(&self) -> ChunkSparseIter<'_, T, S> {
     self.into_iter()
   }
 
   #[inline]
-  pub fn iter_mut(&mut self) -> ChunkSparseIterMut<T, S> {
+  pub fn iter_mut(&mut self) -> ChunkSparseIterMut<'_, T, S> {
     self.into_iter()
   }
 
   #[inline]
-  pub fn cells(&self) -> ChunkSparseCells<T, S> {
+  pub fn cells(&self) -> ChunkSparseCells<'_, T, S> {
     ChunkSparseCells::new(self)
   }
 
   #[inline]
-  pub fn cells_mut(&mut self) -> ChunkSparseCellsMut<T, S> {
+  pub fn cells_mut(&mut self) -> ChunkSparseCellsMut<'_, T, S> {
     ChunkSparseCellsMut::new(self)
   }
 
@@ -328,6 +333,11 @@ impl<T, const S: usize> Chunk<T, S> {
     &self[pos.into()]
   }
 
+  #[inline]
+  pub fn get_mut(&mut self, pos: impl Into<LocalPos>) -> &mut T {
+    &mut self[pos.into()]
+  }
+
   pub fn sample(&self, pos: impl Into<[f32; 2]>) -> T
   where T: Lerp<Output = T> + Clone {
     let pos = Vector2::from_array(pos.into());
@@ -372,22 +382,22 @@ impl<T, const S: usize> Chunk<T, S> {
   }
 
   #[inline]
-  pub fn iter(&self) -> ChunkIter<T, S> {
+  pub fn iter(&self) -> ChunkIter<'_, T, S> {
     self.into_iter()
   }
 
   #[inline]
-  pub fn iter_mut(&mut self) -> ChunkIterMut<T, S> {
+  pub fn iter_mut(&mut self) -> ChunkIterMut<'_, T, S> {
     self.into_iter()
   }
 
   #[inline]
-  pub fn cells(&self) -> ChunkCells<T, S> {
+  pub fn cells(&self) -> ChunkCells<'_, T, S> {
     ChunkCells::new(self)
   }
 
   #[inline]
-  pub fn cells_mut(&mut self) -> ChunkCellsMut<T, S> {
+  pub fn cells_mut(&mut self) -> ChunkCellsMut<'_, T, S> {
     ChunkCellsMut::new(self)
   }
 
@@ -576,7 +586,7 @@ fn from_nested_array<T, const N: usize>(array: [[T; N]; N]) -> Box<[T]> {
   }
 }
 
-fn from_nested_array_ref<T, const N: usize>(array: &[[T; N]; N]) -> &[T] {
+const fn from_nested_array_ref<T, const N: usize>(array: &[[T; N]; N]) -> &[T] {
   let Some(len) = usize::checked_mul(N, N) else { panic!() };
   unsafe {
     let ptr = array as *const [[T; N]; N] as *const T;
@@ -584,7 +594,7 @@ fn from_nested_array_ref<T, const N: usize>(array: &[[T; N]; N]) -> &[T] {
   }
 }
 
-fn from_nested_array_mut<T, const N: usize>(array: &mut [[T; N]; N]) -> &mut [T] {
+const fn from_nested_array_mut<T, const N: usize>(array: &mut [[T; N]; N]) -> &mut [T] {
   let Some(len) = usize::checked_mul(N, N) else { panic!() };
   unsafe {
     let ptr = array as *mut [[T; N]; N] as *mut T;

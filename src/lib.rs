@@ -13,6 +13,9 @@ pub use crate::chunk::{Chunk, ChunkSparse};
 pub use crate::grid::{ExGrid, ExGridSparse};
 pub use crate::vector::Lerp;
 
+/// The position of a cell within a grid.
 pub type GlobalPos = [i64; 2];
+/// The position of a chunk within a grid.
 pub type ChunkPos = [i32; 2];
+/// The position of a cell within a chunk.
 pub type LocalPos = [usize; 2];
