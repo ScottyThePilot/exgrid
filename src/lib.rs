@@ -5,7 +5,6 @@ pub extern crate rayon;
 mod macros;
 pub mod dim2;
 pub mod dim3;
-mod misc;
 #[cfg(feature = "serde")]
 mod nested_array;
 mod vector;

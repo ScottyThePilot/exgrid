@@ -4,11 +4,6 @@ pub use self::iter::*;
 #[cfg(feature = "serde")]
 use crate::nested_array::{Array3NestedRepr, Array3Nested};
 use super::LocalPos;
-use crate::misc::{
-  from_3nested_array,
-  from_3nested_array_ref,
-  from_3nested_array_mut
-};
 use crate::vector::{Lerp, Vector3};
 
 #[cfg(feature = "serde")]
@@ -197,8 +192,14 @@ impl<T, const S: usize> From<ChunkSparse<T, S>> for [[[Option<T>; S]; S]; S] {
 }
 
 impl<T, const S: usize> From<ChunkSparse<T, S>> for Box<[Option<T>]> {
+  fn from(value: ChunkSparse<T, S>) -> Self {
+    Vec::from(value).into_boxed_slice()
+  }
+}
+
+impl<T, const S: usize> From<ChunkSparse<T, S>> for Vec<Option<T>> {
   fn from(chunk: ChunkSparse<T, S>) -> Self {
-    from_3nested_array(chunk.inner.inner)
+    Vec::from(chunk.inner.inner).into_flattened().into_flattened()
   }
 }
 
@@ -315,7 +316,7 @@ impl<T, const S: usize> Chunk<T, S> {
   }
 
   pub fn to_vec(&self) -> Vec<T> where T: Clone {
-    Vec::from(from_3nested_array(self.inner.clone()))
+    self.clone().into()
   }
 
   #[inline]
@@ -430,7 +431,13 @@ impl<T, const S: usize> From<Chunk<T, S>> for [[[T; S]; S]; S] {
 
 impl<T, const S: usize> From<Chunk<T, S>> for Box<[T]> {
   fn from(chunk: Chunk<T, S>) -> Self {
-    from_3nested_array(chunk.inner)
+    Vec::from(chunk).into_boxed_slice()
+  }
+}
+
+impl<T, const S: usize> From<Chunk<T, S>> for Vec<T> {
+  fn from(chunk: Chunk<T, S>) -> Self {
+    Vec::from(chunk.inner).into_flattened().into_flattened()
   }
 }
 
