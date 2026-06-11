@@ -15,7 +15,6 @@ use crate::misc::{
 };
 use crate::vector::{Lerp, Vector2};
 
-use num_traits::AsPrimitive;
 #[cfg(feature = "multi-thread")]
 use rayon::iter::{
   IntoParallelIterator,
@@ -77,13 +76,20 @@ impl<T, const S: usize> ChunkSparse<T, S> {
     &mut self[pos.into()]
   }
 
+  pub fn try_into_dense(self) -> Option<Chunk<T, S>> {
+    todo!()
+  }
+
   pub fn sample(&self, pos: impl Into<[f32; 2]>) -> Option<T>
   where T: Lerp<Output = T> + Clone {
     let pos = Vector2::from_array(pos.into());
-    Chunk::<T, S>::assert_bounds_f(pos);
-    try_sample_2d(pos, |pos: Vector2<usize>| {
-      self[pos].as_ref().cloned()
-    })
+    let factor = pos.map(|v| v.rem_euclid(1.0));
+    self.extract_corners(pos).sample_corners(factor)
+  }
+
+  pub(crate) fn extract_corners(&self, pos: impl Into<[f32; 2]>) -> ChunkSparse<T, 2>
+  where T: Clone {
+    ChunkSparse::from(self.inner.extract_corners(pos))
   }
 
   pub fn to_vec(&self) -> Vec<Option<T>> where T: Clone {
@@ -153,6 +159,18 @@ impl<T, const S: usize> ChunkSparse<T, S> {
   const NEW_CELLS: FilterCells<T, S> = |(i, v)| v.as_ref().map(|v| (i, v));
   const NEW_CELLS_MUT: FilterCellsMut<T, S> = |(i, v)| v.as_mut().map(|v| (i, v));
   const NEW_INTO_CELLS: FilterIntoCells<T, S> = |(i, v)| v.map(|v| (i, v));
+}
+
+impl<T> ChunkSparse<T, 2> {
+  pub(super) fn init_corners<F>(pos: impl Into<[f32; 2]>, f: F) -> Self
+  where F: FnMut(Vector2<f32>) -> Option<T> {
+    ChunkSparse::from(Chunk::init_corners(pos, f))
+  }
+
+  pub(crate) fn sample_corners(self, factor: impl Into<[f32; 2]>) -> Option<T>
+  where T: Lerp<Output = T> {
+    self.try_into_dense().map(|chunk| chunk.sample_corners(factor))
+  }
 }
 
 impl<T, const S: usize> Index<Vector2<usize>> for ChunkSparse<T, S> {
@@ -344,9 +362,16 @@ impl<T, const S: usize> Chunk<T, S> {
   pub fn sample(&self, pos: impl Into<[f32; 2]>) -> T
   where T: Lerp<Output = T> + Clone {
     let pos = Vector2::from_array(pos.into());
-    Self::assert_bounds_f(pos);
-    sample_2d(pos, |pos: Vector2<usize>| {
-      self[pos].clone()
+    let factor = pos.map(|v| v.rem_euclid(1.0));
+    self.extract_corners(pos).sample_corners(factor)
+  }
+
+  pub(crate) fn extract_corners(&self, pos: impl Into<[f32; 2]>) -> Chunk<T, 2>
+  where T: Clone {
+    let pos = Vector2::from_array(pos.into());
+    Chunk::<T, S>::assert_bounds_f(pos);
+    Chunk::init_corners(pos, |pos| {
+      self[pos.cast::<usize>()].clone()
     })
   }
 
@@ -425,6 +450,26 @@ impl<T, const S: usize> Chunk<T, S> {
 
   fn assert_bounds_vertical(x: usize) {
     assert!(x < S, "position out of bounds: the size is {S} but the x-index is {x}");
+  }
+}
+
+impl<T> Chunk<T, 2> {
+  pub(super) fn init_corners<F>(pos: impl Into<[f32; 2]>, mut f: F) -> Self
+  where F: FnMut(Vector2<f32>) -> T {
+    let pos = Vector2::from_array(pos.into());
+    let min = pos.map(f32::floor);
+    let max = pos.map(f32::ceil);
+
+    Self::init(|[x, y]| {
+      let x = if x == 0 { min.x } else { max.x };
+      let y = if y == 0 { min.y } else { max.y };
+      f(Vector2::new(x, y))
+    })
+  }
+
+  pub(crate) fn sample_corners(self, pos: impl Into<[f32; 2]>) -> T
+  where T: Lerp<Output = T> {
+    Lerp::lerp(self.inner, pos.into())
   }
 }
 
@@ -576,57 +621,4 @@ fn new_inner<T, F: FnMut(LocalPos) -> T, const N: usize>(mut f: F) -> [[T; N]; N
       f([x, y])
     })
   })
-}
-
-pub(crate) fn lerp_2d<T>(aa: T, ab: T, ba: T, bb: T, factor: Vector2<f32>) -> T
-where T: Lerp<Output = T> {
-  T::lerp(
-    T::lerp(aa, ab, factor.y),
-    T::lerp(ba, bb, factor.y),
-    factor.x
-  )
-}
-
-pub(crate) fn sample_2d<T, D, F>(pos: Vector2<f32>, mut f: F) -> T
-where
-  T: Lerp<Output = T>, F: FnMut(Vector2<D>) -> T,
-  D: AsPrimitive<f32> + Eq, f32: AsPrimitive<D>
-{
-  let min = pos.map(f32::floor).cast::<D>();
-  let max = pos.map(f32::ceil).cast::<D>();
-  if min == max {
-    return f(min);
-  };
-
-  let factor = pos.map(|v| v.rem_euclid(1.0));
-
-  lerp_2d(
-    f(Vector2::new(min.x, min.y)),
-    f(Vector2::new(min.x, max.y)),
-    f(Vector2::new(max.x, min.y)),
-    f(Vector2::new(max.x, max.y)),
-    factor
-  )
-}
-
-pub(crate) fn try_sample_2d<T, D, F>(pos: Vector2<f32>, mut f: F) -> Option<T>
-where
-  T: Lerp<Output = T>, F: FnMut(Vector2<D>) -> Option<T>,
-  D: AsPrimitive<f32> + Eq, f32: AsPrimitive<D>
-{
-  let min = pos.map(f32::floor).cast::<D>();
-  let max = pos.map(f32::ceil).cast::<D>();
-  if min == max {
-    return f(min);
-  };
-
-  let factor = pos.map(|v| v.rem_euclid(1.0));
-
-  Some(lerp_2d(
-    f(Vector2::new(min.x, min.y))?,
-    f(Vector2::new(min.x, max.y))?,
-    f(Vector2::new(max.x, min.y))?,
-    f(Vector2::new(max.x, max.y))?,
-    factor
-  ))
 }

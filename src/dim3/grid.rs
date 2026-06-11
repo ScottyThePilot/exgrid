@@ -3,7 +3,7 @@ mod iter;
 pub use self::iter::*;
 use super::{GlobalPos, ChunkPos, LocalPos};
 use super::chunk::*;
-use crate::vector::Vector3;
+use crate::vector::{Lerp, Vector3};
 
 #[cfg(feature = "multi-thread")]
 use rayon::collections::hash_map::{
@@ -156,6 +156,55 @@ impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
     } else {
       self.remove(pos)
     }
+  }
+
+  /// Samples a value from the grid, linearly interpolating the result value.
+  /// Will return `None` if any of the relevant nearby cells are empty.
+  pub fn try_sample(&self, pos: impl Into<[f32; 3]>) -> Option<T>
+  where T: Lerp<Output = T> + Clone {
+    let pos = Vector3::from_array(pos.into());
+    let factor = pos.map(|v| v.rem_euclid(1.0));
+    self.try_extract_corners(pos).sample_corners(factor)
+  }
+
+  /// Samples a value from the grid, linearly interpolating the result value.
+  /// Uses `T`'s `Default` value whenever a relevant cell is empty.
+  pub fn sample_or_default(&self, pos: impl Into<[f32; 3]>) -> T
+  where T: Lerp<Output = T> + Default + Clone {
+    let pos = Vector3::from_array(pos.into());
+    let factor = pos.map(|v| v.rem_euclid(1.0));
+    self.extract_corners_or_default(pos).sample_corners(factor)
+  }
+
+  /// Samples a value from the grid, linearly interpolating the result value.
+  /// Uses `T`'s `Default` value whenever a relevant cell is empty,
+  /// inserting that value into the empty cell.
+  pub fn sample_insert_default(&mut self, pos: impl Into<[f32; 3]>) -> T
+  where T: Lerp<Output = T> + Default + Clone {
+    let pos = Vector3::from_array(pos.into());
+    let factor = pos.map(|v| v.rem_euclid(1.0));
+    self.extract_corners_insert_default(pos).sample_corners(factor)
+  }
+
+  pub(crate) fn try_extract_corners(&self, pos: impl Into<[f32; 3]>) -> ChunkSparse<T, 2>
+  where T: Clone {
+    ChunkSparse::init_corners(pos, |pos| {
+      self.get(pos.cast::<i64>()).cloned()
+    })
+  }
+
+  pub(crate) fn extract_corners_or_default(&self, pos: impl Into<[f32; 3]>) -> Chunk<T, 2>
+  where T: Clone + Default {
+    Chunk::init_corners(pos, |pos| {
+      self.get(pos.cast::<i64>()).cloned().unwrap_or_default()
+    })
+  }
+
+  pub(crate) fn extract_corners_insert_default(&mut self, pos: impl Into<[f32; 3]>) -> Chunk<T, 2>
+  where T: Clone + Default {
+    Chunk::init_corners(pos, |pos| {
+      self.get_or_insert_default(pos.cast::<i64>()).clone()
+    })
   }
 
   /// Sets the value of a given cell, creating a chunk if necessary,
@@ -395,6 +444,55 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
   where T: Default {
     let (chunk, local) = decompose::<S>(pos.into());
     &mut self.get_chunk_default(chunk)[local]
+  }
+
+  /// Samples a value from the grid, linearly interpolating the result value.
+  /// Will return `None` if any of the relevant nearby cells are empty.
+  pub fn try_sample(&self, pos: impl Into<[f32; 3]>) -> Option<T>
+  where T: Lerp<Output = T> + Clone {
+    let pos = Vector3::from_array(pos.into());
+    let factor = pos.map(|v| v.rem_euclid(1.0));
+    self.try_extract_corners(pos).sample_corners(factor)
+  }
+
+  /// Samples a value from the grid, linearly interpolating the result value.
+  /// Uses `T`'s `Default` value whenever a relevant cell is empty.
+  pub fn sample_or_default(&self, pos: impl Into<[f32; 3]>) -> T
+  where T: Lerp<Output = T> + Default + Clone {
+    let pos = Vector3::from_array(pos.into());
+    let factor = pos.map(|v| v.rem_euclid(1.0));
+    self.extract_corners_or_default(pos).sample_corners(factor)
+  }
+
+  /// Samples a value from the grid, linearly interpolating the result value.
+  /// Uses `T`'s `Default` value whenever a relevant cell is empty,
+  /// inserting that value into the empty cell.
+  pub fn sample_insert_default(&mut self, pos: impl Into<[f32; 3]>) -> T
+  where T: Lerp<Output = T> + Default + Clone {
+    let pos = Vector3::from_array(pos.into());
+    let factor = pos.map(|v| v.rem_euclid(1.0));
+    self.extract_corners_insert_default(pos).sample_corners(factor)
+  }
+
+  pub(crate) fn try_extract_corners(&self, pos: impl Into<[f32; 3]>) -> ChunkSparse<T, 2>
+  where T: Clone {
+    ChunkSparse::init_corners(pos, |pos| {
+      self.get(pos.cast::<i64>()).cloned()
+    })
+  }
+
+  pub(crate) fn extract_corners_or_default(&self, pos: impl Into<[f32; 3]>) -> Chunk<T, 2>
+  where T: Clone + Default {
+    Chunk::init_corners(pos, |pos| {
+      self.get(pos.cast::<i64>()).cloned().unwrap_or_default()
+    })
+  }
+
+  pub(crate) fn extract_corners_insert_default(&mut self, pos: impl Into<[f32; 3]>) -> Chunk<T, 2>
+  where T: Clone + Default {
+    Chunk::init_corners(pos, |pos| {
+      self.get_mut_default(pos.cast::<i64>()).clone()
+    })
   }
 
   /// Sets the value of a given cell, creating a chunk if necessary,

@@ -163,9 +163,8 @@ impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
   pub fn try_sample(&self, pos: impl Into<[f32; 2]>) -> Option<T>
   where T: Lerp<Output = T> + Clone {
     let pos = Vector2::from_array(pos.into());
-    super::chunk::try_sample_2d(pos, |pos: Vector2<i64>| {
-      self.get(pos).cloned()
-    })
+    let factor = pos.map(|v| v.rem_euclid(1.0));
+    self.try_extract_corners(pos).sample_corners(factor)
   }
 
   /// Samples a value from the grid, linearly interpolating the result value.
@@ -173,8 +172,38 @@ impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
   pub fn sample_or_default(&self, pos: impl Into<[f32; 2]>) -> T
   where T: Lerp<Output = T> + Default + Clone {
     let pos = Vector2::from_array(pos.into());
-    super::chunk::sample_2d(pos, |pos: Vector2<i64>| {
-      self.get(pos).cloned().unwrap_or_default()
+    let factor = pos.map(|v| v.rem_euclid(1.0));
+    self.extract_corners_or_default(pos).sample_corners(factor)
+  }
+
+  /// Samples a value from the grid, linearly interpolating the result value.
+  /// Uses `T`'s `Default` value whenever a relevant cell is empty,
+  /// inserting that value into the empty cell.
+  pub fn sample_insert_default(&mut self, pos: impl Into<[f32; 2]>) -> T
+  where T: Lerp<Output = T> + Default + Clone {
+    let pos = Vector2::from_array(pos.into());
+    let factor = pos.map(|v| v.rem_euclid(1.0));
+    self.extract_corners_insert_default(pos).sample_corners(factor)
+  }
+
+  pub(crate) fn try_extract_corners(&self, pos: impl Into<[f32; 2]>) -> ChunkSparse<T, 2>
+  where T: Clone {
+    ChunkSparse::init_corners(pos, |pos| {
+      self.get(pos.cast::<i64>()).cloned()
+    })
+  }
+
+  pub(crate) fn extract_corners_or_default(&self, pos: impl Into<[f32; 2]>) -> Chunk<T, 2>
+  where T: Clone + Default {
+    Chunk::init_corners(pos, |pos| {
+      self.get(pos.cast::<i64>()).cloned().unwrap_or_default()
+    })
+  }
+
+  pub(crate) fn extract_corners_insert_default(&mut self, pos: impl Into<[f32; 2]>) -> Chunk<T, 2>
+  where T: Clone + Default {
+    Chunk::init_corners(pos, |pos| {
+      self.get_or_insert_default(pos.cast::<i64>()).clone()
     })
   }
 
@@ -422,9 +451,8 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
   pub fn try_sample(&self, pos: impl Into<[f32; 2]>) -> Option<T>
   where T: Lerp<Output = T> + Clone {
     let pos = Vector2::from_array(pos.into());
-    super::chunk::try_sample_2d(pos, |pos: Vector2<i64>| {
-      self.get(pos).cloned()
-    })
+    let factor = pos.map(|v| v.rem_euclid(1.0));
+    self.try_extract_corners(pos).sample_corners(factor)
   }
 
   /// Samples a value from the grid, linearly interpolating the result value.
@@ -432,9 +460,8 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
   pub fn sample_or_default(&self, pos: impl Into<[f32; 2]>) -> T
   where T: Lerp<Output = T> + Default + Clone {
     let pos = Vector2::from_array(pos.into());
-    super::chunk::sample_2d(pos, |pos: Vector2<i64>| {
-      self.get(pos).cloned().unwrap_or_default()
-    })
+    let factor = pos.map(|v| v.rem_euclid(1.0));
+    self.extract_corners_or_default(pos).sample_corners(factor)
   }
 
   /// Samples a value from the grid, linearly interpolating the result value.
@@ -443,8 +470,28 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
   pub fn sample_insert_default(&mut self, pos: impl Into<[f32; 2]>) -> T
   where T: Lerp<Output = T> + Default + Clone {
     let pos = Vector2::from_array(pos.into());
-    super::chunk::sample_2d(pos, |pos: Vector2<i64>| {
-      self.get_mut_default(pos).clone()
+    let factor = pos.map(|v| v.rem_euclid(1.0));
+    self.extract_corners_insert_default(pos).sample_corners(factor)
+  }
+
+  pub(crate) fn try_extract_corners(&self, pos: impl Into<[f32; 2]>) -> ChunkSparse<T, 2>
+  where T: Clone {
+    ChunkSparse::init_corners(pos, |pos| {
+      self.get(pos.cast::<i64>()).cloned()
+    })
+  }
+
+  pub(crate) fn extract_corners_or_default(&self, pos: impl Into<[f32; 2]>) -> Chunk<T, 2>
+  where T: Clone + Default {
+    Chunk::init_corners(pos, |pos| {
+      self.get(pos.cast::<i64>()).cloned().unwrap_or_default()
+    })
+  }
+
+  pub(crate) fn extract_corners_insert_default(&mut self, pos: impl Into<[f32; 2]>) -> Chunk<T, 2>
+  where T: Clone + Default {
+    Chunk::init_corners(pos, |pos| {
+      self.get_mut_default(pos.cast::<i64>()).clone()
     })
   }
 

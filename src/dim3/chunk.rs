@@ -9,7 +9,7 @@ use crate::misc::{
   from_3nested_array_ref,
   from_3nested_array_mut
 };
-use crate::vector::Vector3;
+use crate::vector::{Lerp, Vector3};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -66,6 +66,22 @@ impl<T, const S: usize> ChunkSparse<T, S> {
     &mut self[pos.into()]
   }
 
+  pub fn try_into_dense(self) -> Option<Chunk<T, S>> {
+    todo!()
+  }
+
+  pub fn sample(&self, pos: impl Into<[f32; 3]>) -> Option<T>
+  where T: Lerp<Output = T> + Clone {
+    let pos = Vector3::from_array(pos.into());
+    let factor = pos.map(|v| v.rem_euclid(1.0));
+    self.extract_corners(pos).sample_corners(factor)
+  }
+
+  pub(crate) fn extract_corners(&self, pos: impl Into<[f32; 3]>) -> ChunkSparse<T, 2>
+  where T: Clone {
+    ChunkSparse::from(self.inner.extract_corners(pos))
+  }
+
   pub fn to_vec(&self) -> Vec<Option<T>> where T: Clone {
     self.inner.to_vec()
   }
@@ -115,6 +131,18 @@ impl<T, const S: usize> ChunkSparse<T, S> {
   const NEW_CELLS: FilterCells<T, S> = |(i, v)| v.as_ref().map(|v| (i, v));
   const NEW_CELLS_MUT: FilterCellsMut<T, S> = |(i, v)| v.as_mut().map(|v| (i, v));
   const NEW_INTO_CELLS: FilterIntoCells<T, S> = |(i, v)| v.map(|v| (i, v));
+}
+
+impl<T> ChunkSparse<T, 2> {
+  pub(crate) fn init_corners<F>(pos: impl Into<[f32; 3]>, f: F) -> Self
+  where F: FnMut(Vector3<f32>) -> Option<T> {
+    ChunkSparse::from(Chunk::init_corners(pos, f))
+  }
+
+  pub(crate) fn sample_corners(self, factor: impl Into<[f32; 3]>) -> Option<T>
+  where T: Lerp<Output = T> {
+    self.try_into_dense().map(|chunk| chunk.sample_corners(factor))
+  }
 }
 
 impl<T, const S: usize> Index<Vector3<usize>> for ChunkSparse<T, S> {
@@ -270,6 +298,22 @@ impl<T, const S: usize> Chunk<T, S> {
     &mut self[pos.into()]
   }
 
+  pub fn sample(&self, pos: impl Into<[f32; 3]>) -> T
+  where T: Lerp<Output = T> + Clone {
+    let pos = Vector3::from_array(pos.into());
+    let factor = pos.map(|v| v.rem_euclid(1.0));
+    self.extract_corners(pos).sample_corners(factor)
+  }
+
+  pub(crate) fn extract_corners(&self, pos: impl Into<[f32; 3]>) -> Chunk<T, 2>
+  where T: Clone {
+    let pos = Vector3::from_array(pos.into());
+    Chunk::<T, S>::assert_bounds_f(pos);
+    Chunk::init_corners(pos, |pos| {
+      self[pos.cast::<usize>()].clone()
+    })
+  }
+
   pub fn to_vec(&self) -> Vec<T> where T: Clone {
     Vec::from(from_3nested_array(self.inner.clone()))
   }
@@ -307,6 +351,27 @@ impl<T, const S: usize> Chunk<T, S> {
   fn assert_bounds_u(pos: Vector3<usize>) {
     let in_bounds = pos.x < S && pos.y < S;
     assert!(in_bounds, "position out of bound: the size is {S} but the position is {}, {}", pos.x, pos.y)
+  }
+}
+
+impl<T> Chunk<T, 2> {
+  pub(crate) fn init_corners<F>(pos: impl Into<[f32; 3]>, mut f: F) -> Self
+  where F: FnMut(Vector3<f32>) -> T {
+    let pos = Vector3::from_array(pos.into());
+    let min = pos.map(f32::floor);
+    let max = pos.map(f32::ceil);
+
+    Self::init(|[x, y, z]| {
+      let x = if x == 0 { min.x } else { max.x };
+      let y = if y == 0 { min.y } else { max.y };
+      let z = if z == 0 { min.z } else { max.z };
+      f(Vector3::new(x, y, z))
+    })
+  }
+
+  pub(crate) fn sample_corners(self, pos: impl Into<[f32; 3]>) -> T
+  where T: Lerp<Output = T> {
+    Lerp::lerp(self.inner, pos.into())
   }
 }
 
