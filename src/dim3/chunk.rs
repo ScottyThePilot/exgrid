@@ -40,7 +40,17 @@ impl<T, const S: usize> ChunkSparse<T, S> {
 
   pub fn map<U, F>(self, f: F) -> ChunkSparse<U, S>
   where F: FnMut(Option<T>) -> Option<U> {
-    ChunkSparse { inner: self.inner.map(f) }
+    ChunkSparse { inner: self.map_dense(f) }
+  }
+
+  pub fn try_map_opt<F, U>(self, f: F) -> Option<ChunkSparse<U, S>>
+  where F: FnMut(Option<T>) -> Option<Option<U>> {
+    self.inner.try_map_opt(f).map(|inner| ChunkSparse { inner })
+  }
+
+  pub fn try_map_res<F, U, E>(self, f: F) -> Result<ChunkSparse<U, S>, E>
+  where F: FnMut(Option<T>) -> Result<Option<U>, E> {
+    self.inner.try_map_res(f).map(|inner| ChunkSparse { inner })
   }
 
   pub fn as_chunk(&self) -> &Chunk<Option<T>, S> {
@@ -62,7 +72,7 @@ impl<T, const S: usize> ChunkSparse<T, S> {
   }
 
   pub fn try_into_dense(self) -> Option<Chunk<T, S>> {
-    todo!()
+    self.inner.try_map_opt(std::convert::identity)
   }
 
   pub fn sample(&self, pos: impl Into<[f32; 3]>) -> Option<T>
@@ -289,6 +299,20 @@ impl<T, const S: usize> Chunk<T, S> {
     Chunk { inner: self.inner.map(|slice| slice.map(|slice| slice.map(&mut f))) }
   }
 
+  pub fn try_map_opt<F, U>(self, mut f: F) -> Option<Chunk<U, S>>
+  where F: FnMut(T) -> Option<U> {
+    use crate::array_util::ArrayExt;
+    self.inner.try_map_opt(|slice| slice.try_map_opt(|slice| slice.try_map_opt(&mut f)))
+      .map(|inner| Chunk { inner })
+  }
+
+  pub fn try_map_res<F, U, E>(self, mut f: F) -> Result<Chunk<U, S>, E>
+  where F: FnMut(T) -> Result<U, E> {
+    use crate::array_util::ArrayExt;
+    self.inner.try_map_res(|slice| slice.try_map_res(|slice| slice.try_map_res(&mut f)))
+      .map(|inner| Chunk { inner })
+  }
+
   #[inline]
   pub fn get(&self, pos: impl Into<LocalPos>) -> &T {
     &self[pos.into()]
@@ -499,4 +523,34 @@ fn new_inner<T, F: FnMut(LocalPos) -> T, const N: usize>(mut f: F) -> [[[T; N]; 
       })
     })
   })
+}
+
+
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_lerp() {
+    let mut chunk: Chunk<f32, 2> = Chunk::default();
+
+    chunk[[0, 0, 0]] = 25.0;
+    chunk[[1, 0, 0]] = 10.0;
+    chunk[[0, 1, 0]] = 13.7;
+    chunk[[1, 1, 0]] = 40.2;
+    chunk[[0, 0, 1]] = 20.6;
+    chunk[[1, 0, 1]] = 40.9;
+    chunk[[0, 1, 1]] = 84.4;
+    chunk[[1, 1, 1]] = 11.1;
+
+    assert_eq!(chunk.sample([0.0, 0.0, 0.0]), 25.0, "at [0, 0, 0]");
+    assert_eq!(chunk.sample([1.0, 0.0, 0.0]), 10.0, "at [1, 0, 0]");
+    assert_eq!(chunk.sample([0.0, 1.0, 0.0]), 13.7, "at [0, 1, 0]");
+    assert_eq!(chunk.sample([1.0, 1.0, 0.0]), 40.2, "at [1, 1, 0]");
+    assert_eq!(chunk.sample([0.0, 0.0, 1.0]), 20.6, "at [0, 0, 1]");
+    assert_eq!(chunk.sample([1.0, 0.0, 1.0]), 40.9, "at [1, 0, 1]");
+    assert_eq!(chunk.sample([0.0, 1.0, 1.0]), 84.4, "at [0, 1, 1]");
+    assert_eq!(chunk.sample([1.0, 1.0, 1.0]), 11.1, "at [1, 1, 1]");
+  }
 }

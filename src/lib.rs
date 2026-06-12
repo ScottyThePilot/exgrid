@@ -3,6 +3,7 @@ pub extern crate rayon;
 
 #[macro_use]
 mod macros;
+mod array_util;
 pub mod dim2;
 pub mod dim3;
 #[cfg(feature = "serde")]

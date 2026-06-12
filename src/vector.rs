@@ -194,6 +194,8 @@ impl<T> IntoCompound<4> for T {
   }
 }
 
+
+
 #[cfg(test)]
 mod tests {
   use super::*;
