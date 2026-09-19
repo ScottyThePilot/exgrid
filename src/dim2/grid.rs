@@ -19,7 +19,10 @@ use rayon::iter::{
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use std::collections::hash_map::{
-  Entry, HashMap, RandomState,
+  HashMap, RandomState,
+  Entry as HashMapEntry,
+  OccupiedEntry as HashMapOccupiedEntry,
+  VacantEntry as HashMapVacantEntry,
   Iter as HashMapIter,
   IterMut as HashMapIterMut
 };
@@ -236,7 +239,7 @@ impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
     self.get_chunk_entry(pos).or_default()
   }
 
-  pub fn get_chunk_entry(&mut self, pos: impl Into<ChunkPos>) -> Entry<'_, ChunkPos, ChunkSparse<T, S>> {
+  pub fn get_chunk_entry(&mut self, pos: impl Into<ChunkPos>) -> HashMapEntry<'_, ChunkPos, ChunkSparse<T, S>> {
     self.chunks.entry(pos.into())
   }
 
@@ -328,7 +331,7 @@ where T: Deserialize<'de>, H: BuildHasher + Default {
 
 #[derive(Debug)]
 pub struct ExGridSparseEntry<'a, T, const S: usize> {
-  entry: Entry<'a, ChunkPos, ChunkSparse<T, S>>,
+  entry: HashMapEntry<'a, ChunkPos, ChunkSparse<T, S>>,
   pos: LocalPos
 }
 
@@ -519,7 +522,7 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
     self.get_chunk_entry(pos).or_default()
   }
 
-  pub fn get_chunk_entry(&mut self, pos: impl Into<ChunkPos>) -> Entry<'_, ChunkPos, Chunk<T, S>> {
+  pub fn get_chunk_entry(&mut self, pos: impl Into<ChunkPos>) -> HashMapEntry<'_, ChunkPos, Chunk<T, S>> {
     self.chunks.entry(pos.into())
   }
 
@@ -611,7 +614,7 @@ where T: Deserialize<'de>, H: BuildHasher + Default {
 
 #[derive(Debug)]
 pub struct ExGridEntry<'a, T, const S: usize> {
-  entry: Entry<'a, ChunkPos, Chunk<T, S>>,
+  entry: HashMapEntry<'a, ChunkPos, Chunk<T, S>>,
   pos: LocalPos
 }
 
