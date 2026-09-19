@@ -3,6 +3,9 @@ pub mod automata;
 pub mod chunk;
 pub mod grid;
 
+pub use self::chunk::{Chunk, ChunkSparse};
+pub use self::grid::{ExGrid, ExGridSparse};
+
 /// The position of a cell within a grid.
 pub type GlobalPos = [i64; 2];
 /// The position of a chunk within a grid.
