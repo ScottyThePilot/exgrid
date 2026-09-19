@@ -243,6 +243,10 @@ impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
     self.chunks.entry(pos.into())
   }
 
+  pub fn insert_chunk(&mut self, pos: impl Into<ChunkPos>, chunk: ChunkSparse<T, S>) -> Option<ChunkSparse<T, S>> {
+    self.chunks.insert(pos.into(), chunk)
+  }
+
   #[cfg(feature = "multi-thread")]
   #[inline]
   pub fn par_chunks(&self) -> HashMapIterPar<'_, ChunkPos, ChunkSparse<T, S>>
@@ -308,6 +312,44 @@ impl<T, H, const S: usize> IntoIterator for ExGridSparse<T, S, H> {
   #[inline]
   fn into_iter(self) -> Self::IntoIter {
     ExGridSparseIntoIter::new(self)
+  }
+}
+
+impl<T, Pos, H, const S: usize> Extend<(Pos, T)> for ExGridSparse<T, S, H>
+where Pos: Into<GlobalPos>, H: BuildHasher + Default {
+  fn extend<I: IntoIterator<Item = (Pos, T)>>(&mut self, iter: I) {
+    for (pos, value) in iter {
+      self.insert(pos, value);
+    };
+  }
+}
+
+impl<T, Pos, H, const S: usize> FromIterator<(Pos, T)> for ExGridSparse<T, S, H>
+where Pos: Into<GlobalPos>, H: BuildHasher + Default {
+  fn from_iter<I: IntoIterator<Item = (Pos, T)>>(iter: I) -> Self {
+    let mut grid = Self::new();
+    grid.extend(iter);
+    grid
+  }
+}
+
+impl<T, Pos, H, const S: usize> Extend<(Pos, ChunkSparse<T, S>)> for ExGridSparse<T, S, H>
+where Pos: Into<ChunkPos>, H: BuildHasher + Default {
+  fn extend<I: IntoIterator<Item = (Pos, ChunkSparse<T, S>)>>(&mut self, iter: I) {
+    for (chunk_pos, chunk) in iter {
+      self.insert_chunk(chunk_pos, chunk);
+    };
+  }
+}
+
+impl<T, Pos, H, const S: usize> FromIterator<(Pos, ChunkSparse<T, S>)> for ExGridSparse<T, S, H>
+where Pos: Into<ChunkPos>, H: BuildHasher + Default {
+  fn from_iter<I: IntoIterator<Item = (Pos, ChunkSparse<T, S>)>>(iter: I) -> Self {
+    let chunks = iter.into_iter()
+      .map(|(chunk_pos, chunk)| (chunk_pos.into(), chunk))
+      .collect::<HashMap<ChunkPos, ChunkSparse<T, S>, H>>();
+
+    ExGridSparse { chunks }
   }
 }
 
@@ -526,6 +568,10 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
     self.chunks.entry(pos.into())
   }
 
+  pub fn insert_chunk(&mut self, pos: impl Into<ChunkPos>, chunk: Chunk<T, S>) -> Option<Chunk<T, S>> {
+    self.chunks.insert(pos.into(), chunk)
+  }
+
   #[cfg(feature = "multi-thread")]
   #[inline]
   pub fn par_chunks(&self) -> HashMapIterPar<'_, ChunkPos, Chunk<T, S>>
@@ -591,6 +637,44 @@ impl<T, H, const S: usize> IntoIterator for ExGrid<T, S, H> {
   #[inline]
   fn into_iter(self) -> Self::IntoIter {
     ExGridIntoIter::new(self)
+  }
+}
+
+impl<T, Pos, H, const S: usize> Extend<(Pos, T)> for ExGrid<T, S, H>
+where Pos: Into<GlobalPos>, H: BuildHasher + Default, T: Default {
+  fn extend<I: IntoIterator<Item = (Pos, T)>>(&mut self, iter: I) {
+    for (pos, value) in iter {
+      self.insert_default(pos, value);
+    };
+  }
+}
+
+impl<T, Pos, H, const S: usize> FromIterator<(Pos, T)> for ExGrid<T, S, H>
+where Pos: Into<GlobalPos>, H: BuildHasher + Default, T: Default {
+  fn from_iter<I: IntoIterator<Item = (Pos, T)>>(iter: I) -> Self {
+    let mut grid = Self::new();
+    grid.extend(iter);
+    grid
+  }
+}
+
+impl<T, Pos, H, const S: usize> Extend<(Pos, Chunk<T, S>)> for ExGrid<T, S, H>
+where Pos: Into<ChunkPos>, H: BuildHasher + Default {
+  fn extend<I: IntoIterator<Item = (Pos, Chunk<T, S>)>>(&mut self, iter: I) {
+    for (chunk_pos, chunk) in iter {
+      self.insert_chunk(chunk_pos, chunk);
+    };
+  }
+}
+
+impl<T, Pos, H, const S: usize> FromIterator<(Pos, Chunk<T, S>)> for ExGrid<T, S, H>
+where Pos: Into<ChunkPos>, H: BuildHasher + Default {
+  fn from_iter<I: IntoIterator<Item = (Pos, Chunk<T, S>)>>(iter: I) -> Self {
+    let chunks = iter.into_iter()
+      .map(|(chunk_pos, chunk)| (chunk_pos.into(), chunk))
+      .collect::<HashMap<ChunkPos, Chunk<T, S>, H>>();
+
+    ExGrid { chunks }
   }
 }
 
