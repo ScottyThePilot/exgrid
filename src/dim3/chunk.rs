@@ -1,11 +1,21 @@
 mod iter;
+#[cfg(feature = "multi-thread")]
+mod iter_par;
 
 pub use self::iter::*;
+#[cfg(feature = "multi-thread")]
+pub use self::iter_par::*;
 #[cfg(feature = "serde")]
 use crate::nested_array::{Array3NestedRepr, Array3Nested};
 use super::LocalPos;
 use crate::vector::{Lerp, Vector3};
 
+#[cfg(feature = "multi-thread")]
+use rayon::iter::{
+  IntoParallelIterator,
+  IntoParallelRefIterator,
+  IntoParallelRefMutIterator,
+};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -255,6 +265,39 @@ impl<T, const S: usize> IntoIterator for ChunkSparse<T, S> {
   }
 }
 
+#[cfg(feature = "multi-thread")]
+impl<'data, T: Sync + 'data, const S: usize> IntoParallelRefIterator<'data> for ChunkSparse<T, S> {
+  type Item = &'data T;
+  type Iter = ChunkSparseIterPar<'data, T, S>;
+
+  #[inline]
+  fn par_iter(&'data self) -> Self::Iter {
+    ChunkSparseIterPar::new(&self)
+  }
+}
+
+#[cfg(feature = "multi-thread")]
+impl<'data, T: Send + 'data, const S: usize> IntoParallelRefMutIterator<'data> for ChunkSparse<T, S> {
+  type Item = &'data mut T;
+  type Iter = ChunkSparseIterMutPar<'data, T, S>;
+
+  #[inline]
+  fn par_iter_mut(&'data mut self) -> Self::Iter {
+    ChunkSparseIterMutPar::new(self)
+  }
+}
+
+#[cfg(feature = "multi-thread")]
+impl<T: Send, const S: usize> IntoParallelIterator for ChunkSparse<T, S> {
+  type Item = T;
+  type Iter = ChunkSparseIntoIterPar<T, S>;
+
+  #[inline]
+  fn into_par_iter(self) -> Self::Iter {
+    ChunkSparseIntoIterPar::new(self)
+  }
+}
+
 #[cfg(feature = "serde")]
 impl<T, const L: usize> Serialize for ChunkSparse<T, L>
 where T: Serialize {
@@ -492,6 +535,39 @@ impl<T, const S: usize> IntoIterator for Chunk<T, S> {
   #[inline]
   fn into_iter(self) -> Self::IntoIter {
     ChunkIntoIter::new(self)
+  }
+}
+
+#[cfg(feature = "multi-thread")]
+impl<'data, T: Sync + 'data, const S: usize> IntoParallelRefIterator<'data> for Chunk<T, S> {
+  type Item = &'data T;
+  type Iter = ChunkIterPar<'data, T, S>;
+
+  #[inline]
+  fn par_iter(&'data self) -> Self::Iter {
+    ChunkIterPar::new(&self)
+  }
+}
+
+#[cfg(feature = "multi-thread")]
+impl<'data, T: Send + 'data, const S: usize> IntoParallelRefMutIterator<'data> for Chunk<T, S> {
+  type Item = &'data mut T;
+  type Iter = ChunkIterMutPar<'data, T, S>;
+
+  #[inline]
+  fn par_iter_mut(&'data mut self) -> Self::Iter {
+    ChunkIterMutPar::new(self)
+  }
+}
+
+#[cfg(feature = "multi-thread")]
+impl<T: Send, const S: usize> IntoParallelIterator for Chunk<T, S> {
+  type Item = T;
+  type Iter = ChunkIntoIterPar<T, S>;
+
+  #[inline]
+  fn into_par_iter(self) -> Self::Iter {
+    ChunkIntoIterPar::new(self)
   }
 }
 
