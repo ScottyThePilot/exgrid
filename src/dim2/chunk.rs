@@ -686,6 +686,12 @@ fn new_inner<T, F: FnMut(LocalPos) -> T, const N: usize>(mut f: F) -> [[T; N]; N
   })
 }
 
+pub fn unfold<const S: usize>(i: usize) -> LocalPos {
+  let x = i % S;
+  let y = i / S;
+  [x, y]
+}
+
 
 
 #[cfg(test)]

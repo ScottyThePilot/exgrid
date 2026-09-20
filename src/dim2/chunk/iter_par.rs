@@ -15,6 +15,7 @@ use rayon::iter::plumbing::{
 
 
 #[repr(transparent)]
+#[derive(Debug, Clone)]
 pub struct ChunkSparseIterPar<'data, T: Sync, const S: usize> {
   inner: Flatten<ChunkIterPar<'data, Option<T>, S>>
 }
@@ -29,6 +30,7 @@ impl<'data, T: Sync, const S: usize> ChunkSparseIterPar<'data, T, S> {
 impl_par_iterator!(ChunkSparseIterPar, <'data, T: Sync + 'data, S>, &'data T);
 
 #[repr(transparent)]
+#[derive(Debug)]
 pub struct ChunkSparseIterMutPar<'data, T: Send, const S: usize> {
   inner: Flatten<ChunkIterMutPar<'data, Option<T>, S>>
 }
@@ -43,6 +45,7 @@ impl<'data, T: Send, const S: usize> ChunkSparseIterMutPar<'data, T, S> {
 impl_par_iterator!(ChunkSparseIterMutPar, <'data, T: Send + 'data, S>, &'data mut T);
 
 #[repr(transparent)]
+#[derive(Debug, Clone)]
 pub struct ChunkSparseIntoIterPar<T: Send, const S: usize> {
   inner: Flatten<ChunkIntoIterPar<Option<T>, S>>
 }
@@ -59,6 +62,7 @@ impl_par_iterator!(ChunkSparseIntoIterPar, <T: Send, S>, T);
 
 
 #[repr(transparent)]
+#[derive(Debug, Clone)]
 pub struct ChunkIterPar<'data, T: Sync, const S: usize> {
   inner: <&'data [T] as IntoParallelIterator>::Iter
 }
@@ -73,6 +77,7 @@ impl<'data, T: Sync, const S: usize> ChunkIterPar<'data, T, S> {
 impl_par_iterator_indexed!(ChunkIterPar, <'data, T: Sync + 'data, S>, &'data T);
 
 #[repr(transparent)]
+#[derive(Debug)]
 pub struct ChunkIterMutPar<'data, T: Send, const S: usize> {
   inner: <&'data mut [T] as IntoParallelIterator>::Iter
 }
@@ -87,6 +92,7 @@ impl<'data, T: Send, const S: usize> ChunkIterMutPar<'data, T, S> {
 impl_par_iterator_indexed!(ChunkIterMutPar, <'data, T: Send + 'data, S>, &'data mut T);
 
 #[repr(transparent)]
+#[derive(Debug, Clone)]
 pub struct ChunkIntoIterPar<T: Send, const S: usize> {
   inner: <Vec<T> as IntoParallelIterator>::Iter
 }

@@ -1,4 +1,4 @@
-use super::{Chunk, ChunkSparse};
+use super::{Chunk, ChunkSparse, unfold};
 use crate::dim3::LocalPos;
 
 use std::iter::{Enumerate, FilterMap, Flatten, FusedIterator};
@@ -292,11 +292,3 @@ where I: DoubleEndedIterator<Item = T> + ExactSizeIterator {
 }
 
 impl<I, const S: usize> FusedIterator for Enumerate2<I, S> where I: FusedIterator {}
-
-fn unfold<const S: usize>(i: usize) -> [usize; 3] {
-  let x = i % S;
-  let i = i / S;
-  let y = i % S;
-  let z = i / S;
-  [x, y, z]
-}

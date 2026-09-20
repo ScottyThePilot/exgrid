@@ -1,3 +1,5 @@
+#![allow(unreachable_pub, unnameable_types)]
+
 use std::ops::{Add, Sub, Mul, Div, Rem, Neg};
 
 use num_traits::AsPrimitive;

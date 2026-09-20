@@ -578,13 +578,13 @@ impl<T, const S: usize> From<Chunk<T, S>> for [[[T; S]; S]; S] {
 
 impl<T, const S: usize> From<Chunk<T, S>> for Box<[T]> {
   fn from(chunk: Chunk<T, S>) -> Self {
-    Vec::from(chunk).into_boxed_slice()
+    chunk.into_flattened_boxed_slice()
   }
 }
 
 impl<T, const S: usize> From<Chunk<T, S>> for Vec<T> {
   fn from(chunk: Chunk<T, S>) -> Self {
-    Vec::from(chunk.inner).into_flattened().into_flattened()
+    chunk.into_flattened()
   }
 }
 
@@ -679,6 +679,14 @@ fn new_inner<T, F: FnMut(LocalPos) -> T, const N: usize>(mut f: F) -> [[[T; N]; 
       })
     })
   })
+}
+
+pub fn unfold<const S: usize>(i: usize) -> LocalPos {
+  let x = i % S;
+  let i = i / S;
+  let y = i % S;
+  let z = i / S;
+  [x, y, z]
 }
 
 

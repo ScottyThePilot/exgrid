@@ -1,4 +1,4 @@
-use super::{Chunk, ChunkSparse};
+use super::{Chunk, ChunkSparse, unfold};
 use crate::dim2::LocalPos;
 
 use std::iter::{Enumerate, FilterMap, Flatten, FusedIterator};
@@ -224,7 +224,7 @@ macro_rules! map {
   ($S:expr, $expr:expr) => {
     match $expr {
       Some((i, item)) => {
-        Some(([i % $S, i / $S], item))
+        Some((unfold::<$S>(i), item))
       },
       None => None
     }
@@ -265,7 +265,7 @@ where I: Iterator<Item = T> {
   fn fold<A, F>(self, init: A, mut f: F) -> A
   where F: FnMut(A, Self::Item) -> A {
     self.inner.fold(init, |a, (i, item)| {
-      f(a, ([i % S, i / S], item))
+      f(a, (unfold::<S>(i), item))
     })
   }
 }
@@ -286,7 +286,7 @@ where I: DoubleEndedIterator<Item = T> + ExactSizeIterator {
   fn rfold<A, F>(self, init: A, mut f: F) -> A
   where F: FnMut(A, Self::Item) -> A {
     self.inner.rfold(init, |a, (i, item)| {
-      f(a, ([i % S, i / S], item))
+      f(a, (unfold::<S>(i), item))
     })
   }
 }
