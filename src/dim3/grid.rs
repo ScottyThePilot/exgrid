@@ -39,6 +39,8 @@ pub struct ExGridSparse<T, const S: usize, H = RandomState> {
 }
 
 impl<T, H, const S: usize> ExGridSparse<T, S, H> {
+  pub const ELEMENTS_PER_CHUNK: usize = ChunkSparse::<T, S>::ELEMENTS;
+
   #[inline]
   pub fn new() -> Self where H: Default {
     Self::default()
@@ -53,7 +55,7 @@ impl<T, H, const S: usize> ExGridSparse<T, S, H> {
   }
 
   pub fn cells_count_max(&self) -> usize {
-    self.chunks.len() * S * S
+    self.chunks.len() * Self::ELEMENTS_PER_CHUNK
   }
 
   pub fn clean_up(&mut self) {
@@ -408,6 +410,8 @@ pub struct ExGrid<T, const S: usize, H = RandomState> {
 }
 
 impl<T, H, const S: usize> ExGrid<T, S, H> {
+  pub const ELEMENTS_PER_CHUNK: usize = Chunk::<T, S>::ELEMENTS;
+
   #[inline]
   pub fn new() -> Self where H: Default {
     Self::default()
@@ -422,7 +426,7 @@ impl<T, H, const S: usize> ExGrid<T, S, H> {
   }
 
   pub fn cells_count(&self) -> usize {
-    self.chunks.len() * S * S
+    self.chunks.len() * Self::ELEMENTS_PER_CHUNK
   }
 
   /// Returns two points `(min, max)` that bound a box containing the all chunks in this grid.

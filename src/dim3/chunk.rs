@@ -30,6 +30,10 @@ pub struct ChunkSparse<T, const S: usize> {
 }
 
 impl<T, const S: usize> ChunkSparse<T, S> {
+  pub const ELEMENTS: usize = Chunk::<T, S>::ELEMENTS;
+
+  const SIZE_HINT: (usize, Option<usize>) = (0, Some(Self::ELEMENTS));
+
   pub fn new() -> Self {
     Self::default()
   }
@@ -369,6 +373,8 @@ pub struct Chunk<T, const S: usize> {
 }
 
 impl<T, const S: usize> Chunk<T, S> {
+  pub const ELEMENTS: usize =  S * S * S;
+
   pub fn new() -> Self where T: Default {
     Self::default()
   }

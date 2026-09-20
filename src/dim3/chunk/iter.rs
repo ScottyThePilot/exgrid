@@ -20,7 +20,7 @@ impl<'a, T, const S: usize> ChunkSparseIter<'a, T, S> {
   }
 }
 
-impl_iterator!(ChunkSparseIter, <'a, T, S>, &'a T, (0, Some(S * S * S)));
+impl_iterator!(ChunkSparseIter, <'a, T, S>, &'a T, ChunkSparse::<T, S>::SIZE_HINT);
 
 /// An iterator over all of the occupied cells in a sparse chunk.
 /// Yields a mutable reference to the cell's value.
@@ -37,7 +37,7 @@ impl<'a, T, const S: usize> ChunkSparseIterMut<'a, T, S> {
   }
 }
 
-impl_iterator!(ChunkSparseIterMut, <'a, T, S>, &'a mut T, (0, Some(S * S * S)));
+impl_iterator!(ChunkSparseIterMut, <'a, T, S>, &'a mut T, ChunkSparse::<T, S>::SIZE_HINT);
 
 /// An iterator over all of the occupied cells in a sparse chunk.
 /// Yields the cell's value.
@@ -54,7 +54,7 @@ impl<T, const S: usize> ChunkSparseIntoIter<T, S> {
   }
 }
 
-impl_iterator!(ChunkSparseIntoIter, <T, S>, T, (0, Some(S * S * S)));
+impl_iterator!(ChunkSparseIntoIter, <T, S>, T, ChunkSparse::<T, S>::SIZE_HINT);
 
 
 
@@ -74,7 +74,7 @@ impl<'a, T, const S: usize> ChunkSparseCells<'a, T, S> {
   }
 }
 
-impl_iterator!(ChunkSparseCells, <'a, T, S>, (LocalPos, &'a T), (0, Some(S * S * S)));
+impl_iterator!(ChunkSparseCells, <'a, T, S>, (LocalPos, &'a T), ChunkSparse::<T, S>::SIZE_HINT);
 
 /// An 'enumerating' iterator over all of the occupied cells in a sparse chunk.
 /// Yields the position of the cell along with a mutable reference to the cell's value.
@@ -92,7 +92,7 @@ impl<'a, T, const S: usize> ChunkSparseCellsMut<'a, T, S> {
   }
 }
 
-impl_iterator!(ChunkSparseCellsMut, <'a, T, S>, (LocalPos, &'a mut T), (0, Some(S * S * S)));
+impl_iterator!(ChunkSparseCellsMut, <'a, T, S>, (LocalPos, &'a mut T), ChunkSparse::<T, S>::SIZE_HINT);
 
 /// An 'enumerating' iterator over all of the occupied cells in a sparse chunk.
 /// Yields the position of the cell along with the cell's value.
@@ -110,7 +110,7 @@ impl<T, const S: usize> ChunkSparseIntoCells<T, S> {
   }
 }
 
-impl_iterator!(ChunkSparseIntoCells, <T, S>, (LocalPos, T), (0, Some(S * S * S)));
+impl_iterator!(ChunkSparseIntoCells, <T, S>, (LocalPos, T), ChunkSparse::<T, S>::SIZE_HINT);
 
 
 
@@ -129,7 +129,7 @@ impl<'a, T, const S: usize> ChunkIter<'a, T, S> {
   }
 }
 
-impl_iterator_known_size!(ChunkIter, <'a, T, S>, &'a T, S * S * S);
+impl_iterator_known_size!(ChunkIter, <'a, T, S>, &'a T, Chunk::<T, S>::ELEMENTS);
 
 /// An iterator over all of the cells in a chunk.
 /// Yields a mutable reference to the cell's value.
@@ -146,7 +146,7 @@ impl<'a, T, const S: usize> ChunkIterMut<'a, T, S> {
   }
 }
 
-impl_iterator_known_size!(ChunkIterMut, <'a, T, S>, &'a mut T, S * S * S);
+impl_iterator_known_size!(ChunkIterMut, <'a, T, S>, &'a mut T, Chunk::<T, S>::ELEMENTS);
 
 /// An iterator over all of the cells in a chunk.
 /// Yields the cell's value.
@@ -163,7 +163,7 @@ impl<T, const S: usize> ChunkIntoIter<T, S> {
   }
 }
 
-impl_iterator_known_size!(ChunkIntoIter, <T, S>, T, S * S * S);
+impl_iterator_known_size!(ChunkIntoIter, <T, S>, T, Chunk::<T, S>::ELEMENTS);
 
 
 
@@ -182,7 +182,7 @@ impl<'a, T, const S: usize> ChunkCells<'a, T, S> {
   }
 }
 
-impl_iterator_known_size!(ChunkCells, <'a, T, S>, (LocalPos, &'a T), S * S * S);
+impl_iterator_known_size!(ChunkCells, <'a, T, S>, (LocalPos, &'a T), Chunk::<T, S>::ELEMENTS);
 
 /// An 'enumerating' iterator over all of the cells in a chunk.
 /// Yields the position of the cell along with a mutable reference to the cell's value.
@@ -199,7 +199,7 @@ impl<'a, T, const S: usize> ChunkCellsMut<'a, T, S> {
   }
 }
 
-impl_iterator_known_size!(ChunkCellsMut, <'a, T, S>, (LocalPos, &'a mut T), S * S * S);
+impl_iterator_known_size!(ChunkCellsMut, <'a, T, S>, (LocalPos, &'a mut T), Chunk::<T, S>::ELEMENTS);
 
 /// An 'enumerating' iterator over all of the cells in a chunk.
 /// Yields the position of the cell along with the cell's value.
@@ -216,7 +216,7 @@ impl<T, const S: usize> ChunkIntoCells<T, S> {
   }
 }
 
-impl_iterator_known_size!(ChunkIntoCells, <T, S>, (LocalPos, T), S * S * S);
+impl_iterator_known_size!(ChunkIntoCells, <T, S>, (LocalPos, T), Chunk::<T, S>::ELEMENTS);
 
 
 
