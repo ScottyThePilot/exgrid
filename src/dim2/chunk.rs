@@ -171,9 +171,9 @@ impl<T, const S: usize> ChunkSparse<T, S> {
   }
 
   // Functions for filtering iterator output
-  const NEW_CELLS: FilterCells<T, S> = |(i, v)| v.as_ref().map(|v| (i, v));
-  const NEW_CELLS_MUT: FilterCellsMut<T, S> = |(i, v)| v.as_mut().map(|v| (i, v));
-  const NEW_INTO_CELLS: FilterIntoCells<T, S> = |(i, v)| v.map(|v| (i, v));
+  const FILTER_CELLS: FilterCells<T, S> = |(i, v)| v.as_ref().map(|v| (i, v));
+  const FILTER_CELLS_MUT: FilterCellsMut<T, S> = |(i, v)| v.as_mut().map(|v| (i, v));
+  const FILTER_INTO_CELLS: FilterIntoCells<T, S> = |(i, v)| v.map(|v| (i, v));
 }
 
 impl<T> ChunkSparse<T, 2> {

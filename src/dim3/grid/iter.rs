@@ -71,7 +71,7 @@ pub struct ExGridSparseCells<'a, T, const S: usize> {
 
 impl<'a, T, const S: usize> ExGridSparseCells<'a, T, S> {
   pub(crate) fn new<H>(grid: &'a ExGridSparse<T, S, H>) -> Self {
-    let inner = grid.chunks.iter().flat_map(ExGridSparse::<T, S, H>::NEW_SPARSE_CELLS);
+    let inner = grid.chunks.iter().flat_map(ExGridSparse::<T, S, H>::FILTER_CELLS);
     ExGridSparseCells { inner }
   }
 }
@@ -90,7 +90,7 @@ pub struct ExGridSparseCellsMut<'a, T, const S: usize> {
 
 impl<'a, T, const S: usize> ExGridSparseCellsMut<'a, T, S> {
   pub(crate) fn new<H>(grid: &'a mut ExGridSparse<T, S, H>) -> Self {
-    let inner = grid.chunks.iter_mut().flat_map(ExGridSparse::<T, S, H>::NEW_SPARSE_CELLS_MUT);
+    let inner = grid.chunks.iter_mut().flat_map(ExGridSparse::<T, S, H>::FILTER_CELLS_MUT);
     ExGridSparseCellsMut { inner }
   }
 }
@@ -109,7 +109,7 @@ pub struct ExGridSparseIntoCells<T, const S: usize> {
 
 impl<T, const S: usize> ExGridSparseIntoCells<T, S> {
   pub(crate) fn new<H>(grid: ExGridSparse<T, S, H>) -> Self {
-    let inner = grid.chunks.into_iter().flat_map(ExGridSparse::<T, S, H>::NEW_SPARSE_INTO_CELLS);
+    let inner = grid.chunks.into_iter().flat_map(ExGridSparse::<T, S, H>::FILTER_INTO_CELLS);
     ExGridSparseIntoCells { inner }
   }
 }
@@ -175,7 +175,7 @@ pub struct ExGridCells<'a, T, const S: usize> {
 
 impl<'a, T, const S: usize> ExGridCells<'a, T, S> {
   pub(crate) fn new<H>(grid: &'a ExGrid<T, S, H>) -> Self {
-    let inner = grid.chunks.iter().flat_map(ExGrid::<T, S, H>::NEW_CELLS);
+    let inner = grid.chunks.iter().flat_map(ExGrid::<T, S, H>::FILTER_CELLS);
     ExGridCells { inner }
   }
 }
@@ -194,7 +194,7 @@ pub struct ExGridCellsMut<'a, T, const S: usize> {
 
 impl<'a, T, const S: usize> ExGridCellsMut<'a, T, S> {
   pub(crate) fn new<H>(grid: &'a mut ExGrid<T, S, H>) -> Self {
-    let inner = grid.chunks.iter_mut().flat_map(ExGrid::<T, S, H>::NEW_CELLS_MUT);
+    let inner = grid.chunks.iter_mut().flat_map(ExGrid::<T, S, H>::FILTER_CELLS_MUT);
     ExGridCellsMut { inner }
   }
 }
@@ -213,7 +213,7 @@ pub struct ExGridIntoCells<T, const S: usize> {
 
 impl<T, const S: usize> ExGridIntoCells<T, S> {
   pub(crate) fn new<H>(grid: ExGrid<T, S, H>) -> Self {
-    let inner = grid.chunks.into_iter().flat_map(ExGrid::<T, S, H>::NEW_INTO_CELLS);
+    let inner = grid.chunks.into_iter().flat_map(ExGrid::<T, S, H>::FILTER_INTO_CELLS);
     ExGridIntoCells { inner }
   }
 }

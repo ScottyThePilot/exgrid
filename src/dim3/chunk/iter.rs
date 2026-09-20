@@ -69,7 +69,7 @@ pub struct ChunkSparseCells<'a, T, const S: usize> {
 impl<'a, T, const S: usize> ChunkSparseCells<'a, T, S> {
   pub(crate) fn new(chunk: &'a ChunkSparse<T, S>) -> Self {
     let inner = ChunkCells::new(&chunk.inner)
-      .filter_map(ChunkSparse::<T, S>::NEW_CELLS);
+      .filter_map(ChunkSparse::<T, S>::FILTER_CELLS);
     ChunkSparseCells { inner }
   }
 }
@@ -87,7 +87,7 @@ pub struct ChunkSparseCellsMut<'a, T, const S: usize> {
 impl<'a, T, const S: usize> ChunkSparseCellsMut<'a, T, S> {
   pub(crate) fn new(chunk: &'a mut ChunkSparse<T, S>) -> Self {
     let inner = ChunkCellsMut::new(&mut chunk.inner)
-      .filter_map(ChunkSparse::<T, S>::NEW_CELLS_MUT);
+      .filter_map(ChunkSparse::<T, S>::FILTER_CELLS_MUT);
     ChunkSparseCellsMut { inner }
   }
 }
@@ -105,7 +105,7 @@ pub struct ChunkSparseIntoCells<T, const S: usize> {
 impl<T, const S: usize> ChunkSparseIntoCells<T, S> {
   pub(crate) fn new(chunk: ChunkSparse<T, S>) -> Self {
     let inner = ChunkIntoCells::new(chunk.inner)
-      .filter_map(ChunkSparse::<T, S>::NEW_INTO_CELLS);
+      .filter_map(ChunkSparse::<T, S>::FILTER_INTO_CELLS);
     ChunkSparseIntoCells { inner }
   }
 }

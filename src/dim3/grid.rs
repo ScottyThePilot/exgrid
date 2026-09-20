@@ -7,11 +7,13 @@ use crate::vector::{Lerp, Vector3};
 
 #[cfg(feature = "multi-thread")]
 use rayon::collections::hash_map::{
+  IntoIter as HashMapIntoIterPar,
   Iter as HashMapIterPar,
   IterMut as HashMapIterMutPar
 };
 #[cfg(feature = "multi-thread")]
 use rayon::iter::{
+  IntoParallelIterator,
   IntoParallelRefIterator,
   IntoParallelRefMutIterator
 };
@@ -123,9 +125,9 @@ impl<T, H, const S: usize> ExGridSparse<T, S, H> {
     self.chunks.iter_mut()
   }
 
-  const NEW_SPARSE_CELLS: FilterSparseCells<T, S> = |(&chunk, i)| Compose::new(chunk, ChunkSparseCells::new(i));
-  const NEW_SPARSE_CELLS_MUT: FilterSparseCellsMut<T, S> = |(&chunk, i)| Compose::new(chunk, ChunkSparseCellsMut::new(i));
-  const NEW_SPARSE_INTO_CELLS: FilterSparseIntoCells<T, S> = |(chunk, i)| Compose::new(chunk, ChunkSparseIntoCells::new(i));
+  const FILTER_CELLS: FilterSparseCells<T, S> = |(&chunk, i)| Compose::new(chunk, ChunkSparseCells::new(i));
+  const FILTER_CELLS_MUT: FilterSparseCellsMut<T, S> = |(&chunk, i)| Compose::new(chunk, ChunkSparseCellsMut::new(i));
+  const FILTER_INTO_CELLS: FilterSparseIntoCells<T, S> = |(chunk, i)| Compose::new(chunk, ChunkSparseIntoCells::new(i));
 }
 
 impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
@@ -259,6 +261,13 @@ impl<T, H: BuildHasher, const S: usize> ExGridSparse<T, S, H> {
   pub fn par_chunks_mut(&mut self) -> HashMapIterMutPar<'_, ChunkPos, ChunkSparse<T, S>>
   where T: Send {
     self.chunks.par_iter_mut()
+  }
+
+  #[cfg(feature = "multi-thread")]
+  #[inline]
+  pub fn into_par_chunks(self) -> HashMapIntoIterPar<ChunkPos, ChunkSparse<T, S>>
+  where T: Send {
+    self.chunks.into_par_iter()
   }
 
   pub fn entry(&mut self, pos: impl Into<GlobalPos>) -> ExGridSparseEntry<'_, T, S> {
@@ -466,9 +475,9 @@ impl<T, H, const S: usize> ExGrid<T, S, H> {
     self.chunks.iter_mut()
   }
 
-  const NEW_CELLS: FilterCells<T, S> = |(&chunk, i)| Compose::new(chunk, ChunkCells::new(i));
-  const NEW_CELLS_MUT: FilterCellsMut<T, S> = |(&chunk, i)| Compose::new(chunk, ChunkCellsMut::new(i));
-  const NEW_INTO_CELLS: FilterIntoCells<T, S> = |(chunk, i)| Compose::new(chunk, ChunkIntoCells::new(i));
+  const FILTER_CELLS: FilterCells<T, S> = |(&chunk, i)| Compose::new(chunk, ChunkCells::new(i));
+  const FILTER_CELLS_MUT: FilterCellsMut<T, S> = |(&chunk, i)| Compose::new(chunk, ChunkCellsMut::new(i));
+  const FILTER_INTO_CELLS: FilterIntoCells<T, S> = |(chunk, i)| Compose::new(chunk, ChunkIntoCells::new(i));
 }
 
 impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
@@ -584,6 +593,13 @@ impl<T, H: BuildHasher, const S: usize> ExGrid<T, S, H> {
   pub fn par_chunks_mut(&mut self) -> HashMapIterMutPar<'_, ChunkPos, Chunk<T, S>>
   where T: Send {
     self.chunks.par_iter_mut()
+  }
+
+  #[cfg(feature = "multi-thread")]
+  #[inline]
+  pub fn into_par_chunks(self) -> HashMapIntoIterPar<ChunkPos, Chunk<T, S>>
+  where T: Send {
+    self.chunks.into_par_iter()
   }
 
   pub fn entry(&mut self, pos: impl Into<GlobalPos>) -> ExGridEntry<'_, T, S> {
