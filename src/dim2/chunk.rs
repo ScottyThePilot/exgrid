@@ -1,10 +1,10 @@
-mod iter;
+pub mod iter;
 #[cfg(feature = "multi-thread")]
-mod iter_par;
+pub mod iter_par;
 
-pub use self::iter::*;
+use self::iter::*;
 #[cfg(feature = "multi-thread")]
-pub use self::iter_par::*;
+use self::iter_par::*;
 #[cfg(feature = "serde")]
 use crate::nested_array::{Array2NestedRepr, Array2Nested};
 use super::LocalPos;
@@ -115,12 +115,6 @@ impl<T, const S: usize> ChunkSparse<T, S> {
 
   pub fn to_vec(&self) -> Vec<Option<T>> where T: Clone {
     self.inner.to_vec()
-  }
-
-  #[doc(hidden)]
-  #[deprecated = "use `is_all_vacant` instead"]
-  pub fn is_vacant(&self) -> bool {
-    self.is_all_vacant()
   }
 
   /// Returns true if every cell in this chunk is `None`.

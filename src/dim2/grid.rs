@@ -1,8 +1,9 @@
-mod iter;
+pub mod iter;
 
-pub use self::iter::*;
+use self::iter::*;
 use super::{GlobalPos, ChunkPos, LocalPos};
-use super::chunk::*;
+use super::chunk::{Chunk, ChunkSparse};
+use super::chunk::iter::*;
 use crate::vector::{Lerp, Vector2};
 
 #[cfg(feature = "multi-thread")]
@@ -60,12 +61,6 @@ impl<T, H, const S: usize> ExGridSparse<T, S, H> {
 
   pub fn clean_up(&mut self) {
     self.chunks.retain(|_, chunk| !chunk.is_all_vacant());
-  }
-
-  #[doc(hidden)]
-  #[deprecated = "use `is_all_vacant` instead"]
-  pub fn is_vacant(&self) -> bool {
-    self.is_all_vacant()
   }
 
   pub fn is_all_vacant(&self) -> bool {

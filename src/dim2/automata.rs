@@ -1,6 +1,6 @@
 use super::{GlobalPos, ChunkPos};
-use super::chunk::*;
-use super::grid::*;
+use super::chunk::{Chunk, ChunkSparse};
+use super::grid::{ExGrid, ExGridSparse};
 use crate::vector::Vector2;
 
 use num_traits::Signed;
