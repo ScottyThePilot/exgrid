@@ -97,6 +97,18 @@ impl<T, const S: usize> ChunkSparse<T, S> {
     ChunkSparse::from(self.inner.extract_corners(pos))
   }
 
+  pub const fn as_array(&self) -> &[[[Option<T>; S]; S]; S] {
+    &self.inner.inner
+  }
+
+  pub const fn as_array_mut(&mut self) -> &mut [[[Option<T>; S]; S]; S] {
+    &mut self.inner.inner
+  }
+
+  pub fn into_array(self) -> [[[Option<T>; S]; S]; S] {
+    self.inner.inner
+  }
+
   pub fn to_vec(&self) -> Vec<Option<T>> where T: Clone {
     self.inner.to_vec()
   }
@@ -173,6 +185,18 @@ impl<T> ChunkSparse<T, 2> {
   pub(crate) fn sample_corners(self, factor: impl Into<[f32; 3]>) -> Option<T>
   where T: Lerp<Output = T> {
     self.try_into_dense().map(|chunk| chunk.sample_corners(factor))
+  }
+}
+
+impl<T, const S: usize> AsRef<[[[Option<T>; S]; S]; S]> for ChunkSparse<T, S> {
+  fn as_ref(&self) -> &[[[Option<T>; S]; S]; S] {
+    self.as_array()
+  }
+}
+
+impl<T, const S: usize> AsMut<[[[Option<T>; S]; S]; S]> for ChunkSparse<T, S> {
+  fn as_mut(&mut self) -> &mut [[[Option<T>; S]; S]; S] {
+    self.as_array_mut()
   }
 }
 
@@ -398,6 +422,18 @@ impl<T, const S: usize> Chunk<T, S> {
     })
   }
 
+  pub const fn as_array(&self) -> &[[[T; S]; S]; S] {
+    &self.inner
+  }
+
+  pub const fn as_array_mut(&mut self) -> &mut [[[T; S]; S]; S] {
+    &mut self.inner
+  }
+
+  pub fn into_array(self) -> [[[T; S]; S]; S] {
+    self.inner
+  }
+
   pub fn to_vec(&self) -> Vec<T> where T: Clone {
     self.as_flattened().to_vec()
   }
@@ -472,6 +508,18 @@ impl<T> Chunk<T, 2> {
   pub(crate) fn sample_corners(self, pos: impl Into<[f32; 3]>) -> T
   where T: Lerp<Output = T> {
     Lerp::lerp(self.inner, pos.into())
+  }
+}
+
+impl<T, const S: usize> AsRef<[[[T; S]; S]; S]> for Chunk<T, S> {
+  fn as_ref(&self) -> &[[[T; S]; S]; S] {
+    self.as_array()
+  }
+}
+
+impl<T, const S: usize> AsMut<[[[T; S]; S]; S]> for Chunk<T, S> {
+  fn as_mut(&mut self) -> &mut [[[T; S]; S]; S] {
+    self.as_array_mut()
   }
 }
 
