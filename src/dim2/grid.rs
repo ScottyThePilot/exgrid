@@ -26,6 +26,7 @@ use std::collections::hash_map::{
   Entry as HashMapEntry,
   OccupiedEntry as HashMapOccupiedEntry,
   VacantEntry as HashMapVacantEntry,
+  IntoIter as HashMapIntoIter,
   Iter as HashMapIter,
   IterMut as HashMapIterMut
 };
@@ -120,6 +121,11 @@ impl<T, H, const S: usize> ExGridSparse<T, S, H> {
   #[inline]
   pub fn chunks_mut(&mut self) -> HashMapIterMut<'_, ChunkPos, ChunkSparse<T, S>> {
     self.chunks.iter_mut()
+  }
+
+  #[inline]
+  pub fn into_chunks(self) -> HashMapIntoIter<ChunkPos, ChunkSparse<T, S>> {
+    self.chunks.into_iter()
   }
 
   const FILTER_CELLS: FilterSparseCells<T, S> = |(&chunk, i)| Compose::new(chunk, ChunkSparseCells::new(i));
@@ -472,6 +478,11 @@ impl<T, H, const S: usize> ExGrid<T, S, H> {
   #[inline]
   pub fn chunks_mut(&mut self) -> HashMapIterMut<'_, ChunkPos, Chunk<T, S>> {
     self.chunks.iter_mut()
+  }
+
+  #[inline]
+  pub fn into_chunks(self) -> HashMapIntoIter<ChunkPos, Chunk<T, S>> {
+    self.chunks.into_iter()
   }
 
   const FILTER_CELLS: FilterCells<T, S> = |(&chunk, i)| Compose::new(chunk, ChunkCells::new(i));
