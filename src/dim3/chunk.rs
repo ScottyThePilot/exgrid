@@ -443,12 +443,12 @@ impl<T, const S: usize> Chunk<T, S> {
     ChunkIntoCells::new(self)
   }
 
-  fn assert_bounds_f(pos: Vector3<f32>) {
+  pub(crate) fn assert_bounds_f(pos: Vector3<f32>) {
     let in_bounds = pos.x >= 0.0 && pos.y >= 0.0 && pos.x < S as f32 && pos.y < S as f32;
     assert!(in_bounds, "position out of bound: the size is {S} but the position is {}, {}", pos.x, pos.y);
   }
 
-  fn assert_bounds_u(pos: Vector3<usize>) {
+  pub(crate) fn assert_bounds_u(pos: Vector3<usize>) {
     let in_bounds = pos.x < S && pos.y < S;
     assert!(in_bounds, "position out of bound: the size is {S} but the position is {}, {}", pos.x, pos.y)
   }

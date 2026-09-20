@@ -117,24 +117,6 @@ impl<T, const S: usize> ChunkSparse<T, S> {
     self.inner.iter().all(|cell| cell.is_some())
   }
 
-  pub fn horizontal_slice(&self, y: usize) -> [Option<T>; S]
-  where T: Clone {
-    self.inner.horizontal_slice(y)
-  }
-
-  pub(crate) fn horizontal_slice_iter(&self, y: usize) -> impl Iterator<Item = &Option<T>> {
-    self.inner.horizontal_slice_iter(y)
-  }
-
-  pub fn vertical_slice(&self, x: usize) -> [Option<T>; S]
-  where T: Clone {
-    self.inner.vertical_slice(x)
-  }
-
-  pub(crate) fn vertical_slice_iter(&self, x: usize) -> impl Iterator<Item = &Option<T>> {
-    self.inner.vertical_slice_iter(x)
-  }
-
   pub const fn as_flattened(&self) -> &[Option<T>] {
     self.as_chunk().as_flattened()
   }
@@ -420,36 +402,6 @@ impl<T, const S: usize> Chunk<T, S> {
     self.as_flattened().to_vec()
   }
 
-  pub fn horizontal_slice(&self, y: usize) -> [T; S] where T: Clone {
-    Self::assert_bounds_horizontal(y);
-    self.inner[y].clone()
-  }
-
-  pub fn horizontal_slice_ref(&self, y: usize) -> &[T; S] {
-    Self::assert_bounds_horizontal(y);
-    &self.inner[y]
-  }
-
-  pub(crate) fn horizontal_slice_iter(&self, y: usize) -> impl Iterator<Item = &T> {
-    Self::assert_bounds_horizontal(y);
-    self.inner[y].iter()
-  }
-
-  pub fn vertical_slice(&self, x: usize) -> [T; S] where T: Clone {
-    Self::assert_bounds_vertical(x);
-    std::array::from_fn(|y| self.inner[y][x].clone())
-  }
-
-  pub fn vertical_slice_each_ref(&self, x: usize) -> [&T; S] {
-    Self::assert_bounds_vertical(x);
-    std::array::from_fn(|y| &self.inner[y][x])
-  }
-
-  pub(crate) fn vertical_slice_iter(&self, x: usize) -> impl Iterator<Item = &T> {
-    Self::assert_bounds_vertical(x);
-    (0..S).map(move |y| &self.inner[y][x])
-  }
-
   pub const fn as_flattened(&self) -> &[T] {
     self.inner.as_flattened()
   }
@@ -491,21 +443,21 @@ impl<T, const S: usize> Chunk<T, S> {
     ChunkIntoCells::new(self)
   }
 
-  fn assert_bounds_f(pos: Vector2<f32>) {
+  pub(crate) fn assert_bounds_f(pos: Vector2<f32>) {
     let in_bounds = pos.x >= 0.0 && pos.y >= 0.0 && pos.x < S as f32 && pos.y < S as f32;
     assert!(in_bounds, "position out of bound: the size is {S} but the position is {}, {}", pos.x, pos.y);
   }
 
-  fn assert_bounds_u(pos: Vector2<usize>) {
+  pub(crate) fn assert_bounds_u(pos: Vector2<usize>) {
     let in_bounds = pos.x < S && pos.y < S;
     assert!(in_bounds, "position out of bound: the size is {S} but the position is {}, {}", pos.x, pos.y)
   }
 
-  fn assert_bounds_horizontal(y: usize) {
+  pub(crate) fn assert_bounds_horizontal(y: usize) {
     assert!(y < S, "position out of bounds: the size is {S} but the y-index is {y}");
   }
 
-  fn assert_bounds_vertical(x: usize) {
+  pub(crate) fn assert_bounds_vertical(x: usize) {
     assert!(x < S, "position out of bounds: the size is {S} but the x-index is {x}");
   }
 }

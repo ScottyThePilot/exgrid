@@ -240,4 +240,42 @@ impl<T, const S: usize> ChunkSparse<T, S> {
       e: self.vertical_slice_iter(s).any(Option::is_some),
     }
   }
+
+  pub fn horizontal_slice(&self, y: usize) -> [Option<T>; S] where T: Clone {
+    self.as_chunk().horizontal_slice(y)
+  }
+
+  pub(crate) fn horizontal_slice_iter(&self, y: usize) -> impl Iterator<Item = &Option<T>> + DoubleEndedIterator + ExactSizeIterator + Clone {
+    self.as_chunk().horizontal_slice_iter(y)
+  }
+
+  pub fn vertical_slice(&self, x: usize) -> [Option<T>; S] where T: Clone {
+    self.as_chunk().vertical_slice(x)
+  }
+
+  pub(crate) fn vertical_slice_iter(&self, x: usize) -> impl Iterator<Item = &Option<T>> + DoubleEndedIterator + ExactSizeIterator + Clone {
+    self.as_chunk().vertical_slice_iter(x)
+  }
+}
+
+impl<T, const S: usize> Chunk<T, S> {
+  pub fn horizontal_slice(&self, y: usize) -> [T; S] where T: Clone {
+    Self::assert_bounds_horizontal(y);
+    std::array::from_fn(|x| self[[x, y]].clone())
+  }
+
+  pub(crate) fn horizontal_slice_iter(&self, y: usize) -> impl Iterator<Item = &T> + DoubleEndedIterator + ExactSizeIterator + Clone {
+    Self::assert_bounds_horizontal(y);
+    (0..S).map(move |x| &self[[x, y]])
+  }
+
+  pub fn vertical_slice(&self, x: usize) -> [T; S] where T: Clone {
+    Self::assert_bounds_vertical(x);
+    std::array::from_fn(|y| self[[x, y]].clone())
+  }
+
+  pub(crate) fn vertical_slice_iter(&self, x: usize) -> impl Iterator<Item = &T> + DoubleEndedIterator + ExactSizeIterator + Clone {
+    Self::assert_bounds_vertical(x);
+    (0..S).map(move |y| &self[[x, y]])
+  }
 }
