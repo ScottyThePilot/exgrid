@@ -63,11 +63,11 @@ impl<T, const S: usize> ChunkSparse<T, S> {
     self.inner.try_map_res(f).map(|inner| ChunkSparse { inner })
   }
 
-  pub fn as_chunk(&self) -> &Chunk<Option<T>, S> {
+  pub const fn as_chunk(&self) -> &Chunk<Option<T>, S> {
     &self.inner
   }
 
-  pub fn as_chunk_mut(&mut self) -> &mut Chunk<Option<T>, S> {
+  pub const fn as_chunk_mut(&mut self) -> &mut Chunk<Option<T>, S> {
     &mut self.inner
   }
 
@@ -115,6 +115,22 @@ impl<T, const S: usize> ChunkSparse<T, S> {
   /// Returns true if every cell in this chunk is `Some`.
   pub fn is_all_occupied(&self) -> bool {
     self.inner.iter().all(|cell| cell.is_some())
+  }
+
+  pub const fn as_flattened(&self) -> &[Option<T>] {
+    self.as_chunk().as_flattened()
+  }
+
+  pub const fn as_flattened_mut(&mut self) -> &mut [Option<T>] {
+    self.as_chunk_mut().as_flattened_mut()
+  }
+
+  pub fn into_flattened(self) -> Vec<Option<T>> {
+    self.inner.into_flattened()
+  }
+
+  pub fn into_flattened_boxed_slice(self) -> Box<[Option<T>]> {
+    self.into_flattened().into_boxed_slice()
   }
 
   #[inline]
@@ -212,14 +228,14 @@ impl<T, const S: usize> From<ChunkSparse<T, S>> for [[[Option<T>; S]; S]; S] {
 }
 
 impl<T, const S: usize> From<ChunkSparse<T, S>> for Box<[Option<T>]> {
-  fn from(value: ChunkSparse<T, S>) -> Self {
-    Vec::from(value).into_boxed_slice()
+  fn from(chunk: ChunkSparse<T, S>) -> Self {
+    chunk.into_flattened_boxed_slice()
   }
 }
 
 impl<T, const S: usize> From<ChunkSparse<T, S>> for Vec<Option<T>> {
   fn from(chunk: ChunkSparse<T, S>) -> Self {
-    Vec::from(chunk.inner.inner).into_flattened().into_flattened()
+    chunk.into_flattened()
   }
 }
 
@@ -383,7 +399,23 @@ impl<T, const S: usize> Chunk<T, S> {
   }
 
   pub fn to_vec(&self) -> Vec<T> where T: Clone {
-    self.clone().into()
+    self.as_flattened().to_vec()
+  }
+
+  pub const fn as_flattened(&self) -> &[T] {
+    self.inner.as_flattened().as_flattened()
+  }
+
+  pub const fn as_flattened_mut(&mut self) -> &mut [T] {
+    self.inner.as_flattened_mut().as_flattened_mut()
+  }
+
+  pub fn into_flattened(self) -> Vec<T> {
+    Vec::from(self.inner).into_flattened().into_flattened()
+  }
+
+  pub fn into_flattened_boxed_slice(self) -> Box<[T]> {
+    self.into_flattened().into_boxed_slice()
   }
 
   #[inline]

@@ -124,7 +124,7 @@ pub struct ChunkIter<'a, T, const S: usize> {
 
 impl<'a, T, const S: usize> ChunkIter<'a, T, S> {
   pub(crate) fn new(chunk: &'a Chunk<T, S>) -> Self {
-    let inner = chunk.inner.as_flattened().as_flattened().iter();
+    let inner = chunk.as_flattened().iter();
     ChunkIter { inner }
   }
 }
@@ -141,7 +141,7 @@ pub struct ChunkIterMut<'a, T, const S: usize> {
 
 impl<'a, T, const S: usize> ChunkIterMut<'a, T, S> {
   pub(crate) fn new(chunk: &'a mut Chunk<T, S>) -> Self {
-    let inner = chunk.inner.as_flattened_mut().as_flattened_mut().iter_mut();
+    let inner = chunk.as_flattened_mut().iter_mut();
     ChunkIterMut { inner }
   }
 }

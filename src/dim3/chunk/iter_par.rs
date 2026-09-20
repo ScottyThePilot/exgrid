@@ -65,7 +65,7 @@ pub struct ChunkIterPar<'data, T: Sync, const S: usize> {
 
 impl<'data, T: Sync, const S: usize> ChunkIterPar<'data, T, S> {
   pub(crate) fn new(chunk: &'data Chunk<T, S>) -> Self {
-    let inner = chunk.inner.as_flattened().as_flattened().into_par_iter();
+    let inner = chunk.as_flattened().into_par_iter();
     ChunkIterPar { inner }
   }
 }
@@ -79,7 +79,7 @@ pub struct ChunkIterMutPar<'data, T: Send, const S: usize> {
 
 impl<'data, T: Send, const S: usize> ChunkIterMutPar<'data, T, S> {
   pub(crate) fn new(chunk: &'data mut Chunk<T, S>) -> Self {
-    let inner = chunk.inner.as_flattened_mut().as_flattened_mut().into_par_iter();
+    let inner = chunk.as_flattened_mut().into_par_iter();
     ChunkIterMutPar { inner }
   }
 }
